@@ -1,0 +1,56 @@
+<resources>
+    <string name="app_name">Pyloto Entregador</string>
+
+    <!-- Auth -->
+    <string name="login_title">Pyloto Entregador</string>
+    <string name="login_email">Email</string>
+    <string name="login_senha">Senha</string>
+    <string name="login_entrar">Entrar</string>
+    <string name="login_cadastrar">Ainda não tem conta? Cadastre-se</string>
+    <string name="login_esqueci_senha">Esqueci minha senha</string>
+
+    <!-- Home -->
+    <string name="home_title">Corridas Disponíveis</string>
+    <string name="home_sem_corridas">Nenhuma corrida disponível no momento</string>
+    <string name="home_online">Online</string>
+    <string name="home_offline">Offline</string>
+
+    <!-- Corrida -->
+    <string name="corrida_aceitar">Aceitar Corrida</string>
+    <string name="corrida_iniciar">Iniciar Corrida</string>
+    <string name="corrida_coletar">Coletei o Pacote</string>
+    <string name="corrida_finalizar">Finalizar Entrega</string>
+    <string name="corrida_cancelar">Cancelar Corrida</string>
+    <string name="corrida_detalhes">Detalhes da Corrida</string>
+    <string name="corrida_ativa">Corrida em Andamento</string>
+
+    <!-- Perfil -->
+    <string name="perfil_title">Meu Perfil</string>
+    <string name="perfil_ganhos">Meus Ganhos</string>
+    <string name="perfil_historico">Histórico</string>
+    <string name="perfil_sair">Sair</string>
+
+    <!-- Status -->
+    <string name="status_disponivel">Disponível</string>
+    <string name="status_aceita">Aceita</string>
+    <string name="status_a_caminho_coleta">A caminho da coleta</string>
+    <string name="status_coletada">Coletada</string>
+    <string name="status_a_caminho_entrega">A caminho da entrega</string>
+    <string name="status_finalizada">Finalizada</string>
+    <string name="status_cancelada">Cancelada</string>
+
+    <!-- Notificações -->
+    <string name="notif_channel_location">Rastreamento de localização</string>
+    <string name="notif_channel_corrida">Corridas</string>
+    <string name="notif_channel_chat">Mensagens</string>
+    <string name="notif_location_title">Pyloto - Você está online</string>
+    <string name="notif_location_text">Rastreando sua localização para entregas</string>
+
+    <!-- Geral -->
+    <string name="erro_generico">Ocorreu um erro. Tente novamente.</string>
+    <string name="sem_conexao">Sem conexão com a internet</string>
+    <string name="tentar_novamente">Tentar novamente</string>
+    <string name="voltar">Voltar</string>
+    <string name="confirmar">Confirmar</string>
+    <string name="cancelar">Cancelar</string>
+</resources>

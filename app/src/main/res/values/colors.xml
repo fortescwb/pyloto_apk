@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Paleta Pyloto Corp -->
+    <color name="primary">#1A1A1A</color>           <!-- Preto elegante -->
+    <color name="secondary">#8B4513</color>         <!-- Marrom sépia -->
+    <color name="accent">#D4AF37</color>            <!-- Dourado premium -->
+    <color name="background">#FFFFFF</color>        <!-- Branco puro (app limpo) -->
+    <color name="surface">#F5F1E8</color>           <!-- Bege pergaminho -->
+    <color name="text_primary">#2A2A2A</color>      <!-- Cinza escuro -->
+    <color name="text_secondary">#6B6B6B</color>
+    <color name="military_green">#3D5A40</color>    <!-- Verde militar -->
+    <color name="tech_blue">#2C5F7D</color>         <!-- Azul técnico -->
+
+    <!-- Estados -->
+    <color name="status_approved">#3D5A40</color>   <!-- Verde -->
+    <color name="status_pending">#8B4513</color>    <!-- Marrom -->
+    <color name="status_rejected">#C4342D</color>   <!-- Vermelho -->
+
+    <!-- Transparências -->
+    <color name="overlay_dark">#80000000</color>
+    <color name="overlay_light">#40FFFFFF</color>
+
+    <!-- Dark Theme Colors -->
+    <color name="dark_primary">#5B9CC4</color>
+    <color name="dark_background">#121212</color>
+    <color name="dark_surface">#1E1E1E</color>
+    <color name="dark_text_primary">#E0E0E0</color>
+</resources>
