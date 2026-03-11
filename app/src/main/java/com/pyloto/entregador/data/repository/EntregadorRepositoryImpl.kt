@@ -52,7 +52,7 @@ class EntregadorRepositoryImpl @Inject constructor(
         val request = AtualizarPerfilRequest(
             nome = entregador.nome,
             telefone = entregador.telefone,
-            fotoBase64 = null,
+            fotoUrl = null,
             veiculoTipo = entregador.veiculo?.tipo?.name,
             veiculoPlaca = entregador.veiculo?.placa
         )
@@ -61,7 +61,7 @@ class EntregadorRepositoryImpl @Inject constructor(
     }
 
     override suspend fun atualizarStatusOnline(online: Boolean) {
-        apiService.atualizarStatus(StatusRequest(online))
+        apiService.atualizarStatus(StatusRequest(disponivel = online))
         entregadorDao.atualizarStatusOnline(online)
     }
 

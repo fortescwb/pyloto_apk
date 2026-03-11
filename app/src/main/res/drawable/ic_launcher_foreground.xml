@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Gold "P" letter for Pyloto -->
+    <path
+        android:fillColor="#D4AF37"
+        android:pathData="M42,30 L42,78 L48,78 L48,60 L58,60
+            C65.73,60 72,53.73 72,46 C72,38.27 65.73,32 58,32
+            L58,30 Z
+            M48,36 L58,36 C63.52,36 68,40.48 68,46
+            C68,51.52 63.52,56 58,56 L48,56 Z" />
+</vector>

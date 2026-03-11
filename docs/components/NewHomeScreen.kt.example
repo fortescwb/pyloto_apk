@@ -1,0 +1,486 @@
+package com.pyloto.entregador.presentation.home
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.pyloto.entregador.domain.model.Corrida
+import com.pyloto.entregador.presentation.home.components.*
+import com.pyloto.entregador.presentation.theme.PylotoColors
+import com.pyloto.entregador.presentation.theme.PylotoTheme
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ * NOVA HOME SCREEN - VERSÃO REDESENHADA
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * Estrutura:
+ * 1. Header fixo (verde militar) com status online/offline
+ * 2. Scroll container:
+ *    - Dashboard de estatísticas do dia
+ *    - Meta diária com barra de progresso
+ *    - Mapa compacto (opcional, expansível)
+ *    - Lista de pedidos disponíveis
+ * 3. Bottom Navigation fixo
+ *
+ * Inspirado na versão webapp, otimizado para mobile.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NewHomeScreen(
+    onCorridaClick: (String) -> Unit,
+    onPerfilClick: () -> Unit,
+    onHistoricoClick: () -> Unit,
+    onGanhosClick: () -> Unit,
+    viewModel: HomeViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    Scaffold(
+        topBar = {
+            HomeHeader(
+                isOnline = uiState.isOnline,
+                cidade = uiState.cidadeAtual,
+                regiao = uiState.regiaoAtual,
+                onToggleOnline = viewModel::toggleOnlineStatus
+            )
+        },
+        bottomBar = {
+            EnhancedBottomNavigation(
+                selectedTab = "home",
+                onHomeClick = {},
+                onCorridasClick = onHistoricoClick,
+                onGanhosClick = onGanhosClick,
+                onPerfilClick = onPerfilClick
+            )
+        },
+        containerColor = PylotoColors.Parchment
+    ) { paddingValues ->
+        when {
+            uiState.isLoading -> {
+                LoadingState(modifier = Modifier.padding(paddingValues))
+            }
+
+            uiState.erro != null -> {
+                ErrorState(
+                    error = uiState.erro,
+                    onRetry = viewModel::loadCorridas,
+                    modifier = Modifier.padding(paddingValues)
+                )
+            }
+
+            else -> {
+                HomeContent(
+                    uiState = uiState,
+                    onCorridaAccept = { corridaId ->
+                        viewModel.aceitarCorrida(corridaId)
+                    },
+                    onCorridaDetails = onCorridaClick,
+                    modifier = Modifier.padding(paddingValues)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeContent(
+    uiState: HomeUiState,
+    onCorridaAccept: (String) -> Unit,
+    onCorridaDetails: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            top = 16.dp,
+            bottom = 16.dp
+        ),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Seção 1: Estatísticas do Dia
+        item {
+            DailyStatsSection(
+                earnings = uiState.dailyStats.earnings,
+                deliveries = uiState.dailyStats.deliveries,
+                timeOnline = uiState.dailyStats.timeOnlineFormatted,
+                timeRemaining = uiState.dailyStats.timeRemainingFormatted
+            )
+        }
+
+        // Seção 2: Meta do Dia
+        item {
+            DailyGoalCard(
+                currentEarnings = uiState.dailyStats.earnings,
+                goalAmount = uiState.dailyGoal
+            )
+        }
+
+        // Seção 3: Mapa Compacto (opcional)
+        if (uiState.localizacaoAtual != null) {
+            item {
+                CompactMapSection(
+                    location = uiState.localizacaoAtual,
+                    availableOrders = uiState.corridas.size,
+                    onExpand = { /* TODO: Abrir mapa em fullscreen */ }
+                )
+            }
+        }
+
+        // Seção 4: Header de Pedidos Disponíveis
+        item {
+            AvailableOrdersHeader(
+                count = uiState.corridas.size
+            )
+        }
+
+        // Seção 5: Lista de Pedidos
+        if (uiState.corridas.isEmpty()) {
+            item {
+                EmptyOrdersState()
+            }
+        } else {
+            items(
+                items = uiState.corridas,
+                key = { it.id }
+            ) { corrida ->
+                EnrichedCorridaCard(
+                    corrida = corrida,
+                    onAccept = onCorridaAccept,
+                    onViewDetails = onCorridaDetails
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AvailableOrdersHeader(
+    count: Int
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Pedidos Disponíveis",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = PylotoColors.Black
+        )
+        Text(
+            text = "$count disponíveis",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = PylotoColors.TechBlue
+        )
+    }
+}
+
+@Composable
+private fun CompactMapSection(
+    location: HomeLocation,
+    availableOrders: Int,
+    onExpand: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 4.dp
+        )
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // TODO: Integrar Google Maps aqui
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(PylotoColors.MilitaryGreen.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Map,
+                        contentDescription = null,
+                        tint = PylotoColors.MilitaryGreen,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Text(
+                        text = "Mapa de Entregas",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = PylotoColors.Black
+                    )
+                    Text(
+                        text = "$availableOrders pedidos próximos",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = PylotoColors.TextSecondary
+                    )
+                }
+            }
+
+            // Botão de expandir
+            IconButton(
+                onClick = onExpand,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+            ) {
+                Surface(
+                    color = Color.White,
+                    shape = MaterialTheme.shapes.small,
+                    shadowElevation = 4.dp
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Fullscreen,
+                        contentDescription = "Expandir mapa",
+                        tint = PylotoColors.MilitaryGreen,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EnhancedBottomNavigation(
+    selectedTab: String,
+    onHomeClick: () -> Unit,
+    onCorridasClick: () -> Unit,
+    onGanhosClick: () -> Unit,
+    onPerfilClick: () -> Unit
+) {
+    NavigationBar(
+        containerColor = Color.White,
+        tonalElevation = 8.dp
+    ) {
+        NavigationBarItem(
+            selected = selectedTab == "home",
+            onClick = onHomeClick,
+            icon = { Icon(Icons.Default.Home, contentDescription = null) },
+            label = { Text("Início") },
+            colors = NavigationBarItemDefaults.colors(
+                selectedIconColor = PylotoColors.MilitaryGreen,
+                selectedTextColor = PylotoColors.MilitaryGreen,
+                indicatorColor = PylotoColors.MilitaryGreen.copy(alpha = 0.1f)
+            )
+        )
+        NavigationBarItem(
+            selected = selectedTab == "corridas",
+            onClick = onCorridasClick,
+            icon = { Icon(Icons.Default.List, contentDescription = null) },
+            label = { Text("Corridas") },
+            colors = NavigationBarItemDefaults.colors(
+                selectedIconColor = PylotoColors.MilitaryGreen,
+                selectedTextColor = PylotoColors.MilitaryGreen,
+                indicatorColor = PylotoColors.MilitaryGreen.copy(alpha = 0.1f)
+            )
+        )
+        NavigationBarItem(
+            selected = selectedTab == "ganhos",
+            onClick = onGanhosClick,
+            icon = { Icon(Icons.Default.AccountBalance, contentDescription = null) },
+            label = { Text("Ganhos") },
+            colors = NavigationBarItemDefaults.colors(
+                selectedIconColor = PylotoColors.MilitaryGreen,
+                selectedTextColor = PylotoColors.MilitaryGreen,
+                indicatorColor = PylotoColors.MilitaryGreen.copy(alpha = 0.1f)
+            )
+        )
+        NavigationBarItem(
+            selected = selectedTab == "perfil",
+            onClick = onPerfilClick,
+            icon = { Icon(Icons.Default.Person, contentDescription = null) },
+            label = { Text("Perfil") },
+            colors = NavigationBarItemDefaults.colors(
+                selectedIconColor = PylotoColors.MilitaryGreen,
+                selectedTextColor = PylotoColors.MilitaryGreen,
+                indicatorColor = PylotoColors.MilitaryGreen.copy(alpha = 0.1f)
+            )
+        )
+    }
+}
+
+@Composable
+private fun LoadingState(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            CircularProgressIndicator(
+                color = PylotoColors.MilitaryGreen
+            )
+            Text(
+                text = "Carregando...",
+                style = MaterialTheme.typography.bodyLarge,
+                color = PylotoColors.TextSecondary
+            )
+        }
+    }
+}
+
+@Composable
+private fun ErrorState(
+    error: String?,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.ErrorOutline,
+                contentDescription = null,
+                tint = PylotoColors.StatusRejected,
+                modifier = Modifier.size(48.dp)
+            )
+            Text(
+                text = "Erro ao carregar dados",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            if (error != null) {
+                Text(
+                    text = error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = PylotoColors.TextSecondary
+                )
+            }
+            Button(
+                onClick = onRetry,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PylotoColors.MilitaryGreen
+                )
+            ) {
+                Text("Tentar novamente")
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyOrdersState() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.LocalShipping,
+                contentDescription = null,
+                tint = PylotoColors.TextSecondary,
+                modifier = Modifier.size(64.dp)
+            )
+            Text(
+                text = "Nenhum pedido disponível",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = "Novos pedidos aparecerão aqui em breve",
+                style = MaterialTheme.typography.bodyMedium,
+                color = PylotoColors.TextSecondary
+            )
+        }
+    }
+}
+
+// ════════════════════════════════════════════════════════════════
+// PREVIEW
+// ════════════════════════════════════════════════════════════════
+
+@Preview(showBackground = true, heightDp = 2000)
+@Composable
+private fun NewHomeScreenPreview() {
+    PylotoTheme {
+        // Mock UI State
+        val mockUiState = HomeUiState(
+            isLoading = false,
+            isOnline = true,
+            cidadeAtual = "Ponta Grossa, PR",
+            regiaoAtual = "Centro",
+            dailyStats = DailyStats(
+                earnings = 245.50,
+                deliveries = 12,
+                timeOnlineMinutes = 332,
+                totalFeeSavings = 24.55,
+                averagePerHour = 44.51
+            ),
+            dailyGoal = 300.0,
+            corridas = emptyList(),
+            localizacaoAtual = HomeLocation(-25.095, -50.1773),
+            erro = null
+        )
+
+        // Simular tela
+        Scaffold(
+            topBar = {
+                HomeHeader(
+                    isOnline = mockUiState.isOnline,
+                    cidade = mockUiState.cidadeAtual,
+                    regiao = mockUiState.regiaoAtual,
+                    onToggleOnline = {}
+                )
+            },
+            bottomBar = {
+                EnhancedBottomNavigation(
+                    selectedTab = "home",
+                    onHomeClick = {},
+                    onCorridasClick = {},
+                    onGanhosClick = {},
+                    onPerfilClick = {}
+                )
+            },
+            containerColor = PylotoColors.Parchment
+        ) { paddingValues ->
+            HomeContent(
+                uiState = mockUiState,
+                onCorridaAccept = {},
+                onCorridaDetails = {},
+                modifier = Modifier.padding(paddingValues)
+            )
+        }
+    }
+}

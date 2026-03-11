@@ -1,28 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Paleta Pyloto Corp -->
+    <!--
+        Paleta Pyloto Corp — Contexto: App Entregador
+        Fonte: paleta_cores_Pyloto.md (raiz do workspace)
+
+        IMPORTANTE: estas cores XML são usadas apenas por componentes legados
+        (themes.xml, splash, notificações, ícones). Para Compose, use
+        PylotoColors (presentation/theme/Color.kt).
+    -->
+
+    <!-- Cores Institucionais -->
     <color name="primary">#1A1A1A</color>           <!-- Preto elegante -->
-    <color name="secondary">#8B4513</color>         <!-- Marrom sépia -->
-    <color name="accent">#D4AF37</color>            <!-- Dourado premium -->
-    <color name="background">#FFFFFF</color>        <!-- Branco puro (app limpo) -->
-    <color name="surface">#F5F1E8</color>           <!-- Bege pergaminho -->
-    <color name="text_primary">#2A2A2A</color>      <!-- Cinza escuro -->
+    <color name="secondary">#8B4513</color>          <!-- Marrom sépia -->
+    <color name="accent">#D4AF37</color>             <!-- Dourado premium -->
+    <color name="background">#FFFFFF</color>         <!-- Branco puro (app limpo) -->
+    <color name="surface">#F5F1E8</color>            <!-- Bege pergaminho -->
+    <color name="text_primary">#2A2A2A</color>       <!-- Cinza escuro -->
     <color name="text_secondary">#6B6B6B</color>
-    <color name="military_green">#3D5A40</color>    <!-- Verde militar -->
-    <color name="tech_blue">#2C5F7D</color>         <!-- Azul técnico -->
+    <color name="military_green">#3D5A40</color>     <!-- Verde militar -->
+    <color name="tech_blue">#2C5F7D</color>          <!-- Azul técnico -->
+
+    <!-- Variações -->
+    <color name="tech_blue_dark">#1E4A63</color>
+    <color name="tech_blue_light">#5B9CC4</color>
+    <color name="gold_dark">#B8952E</color>
+    <color name="gold_light">#E8CC6B</color>
+    <color name="surface_dim">#EDE8DD</color>
+    <color name="surface_bright">#FAF8F3</color>
 
     <!-- Estados -->
-    <color name="status_approved">#3D5A40</color>   <!-- Verde -->
-    <color name="status_pending">#8B4513</color>    <!-- Marrom -->
-    <color name="status_rejected">#C4342D</color>   <!-- Vermelho -->
+    <color name="status_approved">#3D5A40</color>    <!-- Verde -->
+    <color name="status_pending">#8B4513</color>     <!-- Marrom -->
+    <color name="status_rejected">#C4342D</color>    <!-- Vermelho -->
+    <color name="status_info">#2C5F7D</color>        <!-- Azul -->
 
     <!-- Transparências -->
     <color name="overlay_dark">#80000000</color>
     <color name="overlay_light">#40FFFFFF</color>
+    <color name="scrim">#52000000</color>
 
     <!-- Dark Theme Colors -->
     <color name="dark_primary">#5B9CC4</color>
     <color name="dark_background">#121212</color>
     <color name="dark_surface">#1E1E1E</color>
+    <color name="dark_surface_high">#2C2C2C</color>
     <color name="dark_text_primary">#E0E0E0</color>
+    <color name="dark_text_secondary">#9E9E9E</color>
 </resources>

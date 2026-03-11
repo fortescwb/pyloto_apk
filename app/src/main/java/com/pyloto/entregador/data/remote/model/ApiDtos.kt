@@ -15,18 +15,28 @@ data class RegisterRequest(
     @SerializedName("senha") val senha: String,
     @SerializedName("telefone") val telefone: String,
     @SerializedName("cpf") val cpf: String,
-    @SerializedName("veiculoTipo") val veiculoTipo: String
+    @SerializedName("tipo_veiculo") val veiculoTipo: String
 )
 
 data class RefreshTokenRequest(
-    @SerializedName("refreshToken") val refreshToken: String
+    @SerializedName("refresh_token") val refreshToken: String
 )
 
+/**
+ * DTO do token retornado pelo backend.
+ * O backend retorna snake_case e inclui o objeto parceiro (não refreshToken/expiresIn).
+ * Exemplo: {"access_token": "...", "token_type": "bearer", "parceiro": {"id": "...", ...}}
+ */
 data class AuthToken(
-    @SerializedName("accessToken") val accessToken: String,
-    @SerializedName("refreshToken") val refreshToken: String,
-    @SerializedName("userId") val userId: String,
-    @SerializedName("expiresIn") val expiresIn: Long
+    @SerializedName("access_token") val accessToken: String,
+    @SerializedName("token_type") val tokenType: String = "bearer",
+    @SerializedName("parceiro") val parceiro: ParceiroLoginDto? = null
+)
+
+data class ParceiroLoginDto(
+    @SerializedName("id") val id: String,
+    @SerializedName("nome") val nome: String? = null,
+    @SerializedName("email") val email: String? = null
 )
 
 // ==================== Corrida ====================
@@ -85,7 +95,7 @@ data class EnderecoResponse(
 )
 
 data class FinalizacaoRequest(
-    @SerializedName("fotoComprovanteBase64") val fotoComprovanteBase64: String?
+    @SerializedName("foto_comprovante_url") val fotoComprovanteUrl: String?
 )
 
 data class CancelamentoRequest(
@@ -111,13 +121,13 @@ data class EntregadorPerfilResponse(
 data class AtualizarPerfilRequest(
     @SerializedName("nome") val nome: String?,
     @SerializedName("telefone") val telefone: String?,
-    @SerializedName("fotoBase64") val fotoBase64: String?,
-    @SerializedName("veiculoTipo") val veiculoTipo: String?,
-    @SerializedName("veiculoPlaca") val veiculoPlaca: String?
+    @SerializedName("foto_url") val fotoUrl: String?,
+    @SerializedName("tipo_veiculo") val veiculoTipo: String?,
+    @SerializedName("placa") val veiculoPlaca: String?
 )
 
 data class StatusRequest(
-    @SerializedName("online") val online: Boolean
+    @SerializedName("disponivel") val disponivel: Boolean
 )
 
 // ==================== Location ====================

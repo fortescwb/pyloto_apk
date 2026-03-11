@@ -1,6 +1,7 @@
 package com.pyloto.entregador.data.local.mapper
 
 import com.pyloto.entregador.core.database.entity.CorridaEntity
+import com.pyloto.entregador.data.remote.model.CorridaDetalhesResponse
 import com.pyloto.entregador.data.remote.model.CorridaResponse
 import com.pyloto.entregador.domain.model.*
 import java.math.BigDecimal
@@ -14,6 +15,52 @@ class CorridaMapper @Inject constructor() {
 
     // Remote → Domain
     fun toDomain(response: CorridaResponse): Corrida {
+        return Corrida(
+            id = response.id,
+            cliente = Cliente(
+                nome = response.clienteNome,
+                telefone = response.clienteTelefone,
+                foto = response.clienteFoto
+            ),
+            origem = Endereco(
+                logradouro = response.enderecoOrigem.logradouro,
+                numero = response.enderecoOrigem.numero,
+                complemento = response.enderecoOrigem.complemento,
+                bairro = response.enderecoOrigem.bairro,
+                cidade = response.enderecoOrigem.cidade,
+                cep = response.enderecoOrigem.cep,
+                latitude = response.enderecoOrigem.latitude,
+                longitude = response.enderecoOrigem.longitude
+            ),
+            destino = Endereco(
+                logradouro = response.enderecoDestino.logradouro,
+                numero = response.enderecoDestino.numero,
+                complemento = response.enderecoDestino.complemento,
+                bairro = response.enderecoDestino.bairro,
+                cidade = response.enderecoDestino.cidade,
+                cep = response.enderecoDestino.cep,
+                latitude = response.enderecoDestino.latitude,
+                longitude = response.enderecoDestino.longitude
+            ),
+            valor = BigDecimal.valueOf(response.valorEntrega),
+            distanciaKm = response.distanciaKm,
+            tempoEstimadoMin = response.tempoEstimadoMin,
+            status = CorridaStatus.valueOf(response.status),
+            timestamps = CorridaTimestamps(
+                criadaEm = response.criadoEm,
+                aceitaEm = response.aceitaEm,
+                iniciadaEm = response.iniciadaEm,
+                coletadaEm = response.coletadaEm,
+                finalizadaEm = response.finalizadaEm,
+                canceladaEm = response.canceladaEm
+            ),
+            fotoComprovanteUrl = response.fotoComprovanteUrl,
+            motivoCancelamento = response.motivoCancelamento
+        )
+    }
+
+    // Remote (Detalhes) → Domain
+    fun toDomain(response: CorridaDetalhesResponse): Corrida {
         return Corrida(
             id = response.id,
             cliente = Cliente(

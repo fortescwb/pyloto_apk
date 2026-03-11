@@ -74,7 +74,7 @@ class CorridaRepositoryImpl @Inject constructor(
     }
 
     override suspend fun finalizarCorrida(corridaId: String, fotoComprovante: String?) {
-        apiService.finalizarCorrida(corridaId, FinalizacaoRequest(fotoComprovante))
+        apiService.finalizarCorrida(corridaId, FinalizacaoRequest(fotoComprovanteUrl = fotoComprovante))
         corridaDao.atualizarStatus(corridaId, "FINALIZADA")
     }
 

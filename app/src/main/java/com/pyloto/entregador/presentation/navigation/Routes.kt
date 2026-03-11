@@ -11,6 +11,7 @@ object Routes {
 
     // Main
     const val HOME = "home"
+    const val CORRIDAS = "corridas"
     const val CORRIDA_DETALHES = "corrida_detalhes"
     const val CORRIDA_ATIVA = "corrida_ativa"
     const val HISTORICO = "historico"
@@ -22,5 +23,6 @@ object Routes {
 
     // Deep link patterns
     fun corridaDetalhes(corridaId: String) = "$CORRIDA_DETALHES/$corridaId"
+    fun corridaAtiva(corridaId: String) = "$CORRIDA_ATIVA/$corridaId"
     fun chat(corridaId: String) = "$CHAT/$corridaId"
 }

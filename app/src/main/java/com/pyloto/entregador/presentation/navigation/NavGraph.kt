@@ -8,10 +8,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.pyloto.entregador.presentation.auth.login.LoginScreen
 import com.pyloto.entregador.presentation.auth.register.RegisterScreen
-import com.pyloto.entregador.presentation.home.HomeScreen
+import com.pyloto.entregador.presentation.home.NewHomeScreen
 import com.pyloto.entregador.presentation.corrida.ativa.CorridaAtivaScreen
 import com.pyloto.entregador.presentation.corrida.disponivel.CorridaDetalhesScreen
 import com.pyloto.entregador.presentation.corrida.historico.HistoricoScreen
+import com.pyloto.entregador.presentation.corridas.CorridasScreen
+import com.pyloto.entregador.presentation.ganhos.GanhosScreen
 import com.pyloto.entregador.presentation.perfil.PerfilScreen
 import com.pyloto.entregador.presentation.chat.ChatScreen
 
@@ -51,32 +53,43 @@ fun PylotoNavGraph(
 
         // ==================== Main ====================
         composable(Routes.HOME) {
-            HomeScreen(
+            NewHomeScreen(
                 onCorridaClick = { corridaId ->
                     navController.navigate(Routes.corridaDetalhes(corridaId))
                 },
+                onCorridaAccept = { corridaId ->
+                    navController.navigate(Routes.corridaAtiva(corridaId))
+                },
                 onPerfilClick = { navController.navigate(Routes.PERFIL) },
                 onHistoricoClick = { navController.navigate(Routes.HISTORICO) },
-                onNotificacoesClick = { navController.navigate(Routes.NOTIFICACOES) }
+                onCorridasClick = { navController.navigate(Routes.CORRIDAS) },
+                onGanhosClick = { navController.navigate(Routes.GANHOS) }
             )
         }
 
         composable(
             route = "${Routes.CORRIDA_DETALHES}/{corridaId}",
             arguments = listOf(navArgument("corridaId") { type = NavType.StringType })
-        ) {
+        ) { backStackEntry ->
+            val corridaId = backStackEntry.arguments?.getString("corridaId").orEmpty()
             CorridaDetalhesScreen(
+                corridaId = corridaId,
                 onNavigateBack = { navController.popBackStack() },
                 onCorridaAceita = {
-                    navController.navigate(Routes.CORRIDA_ATIVA) {
+                    navController.navigate(Routes.corridaAtiva(corridaId)) {
                         popUpTo(Routes.HOME)
                     }
                 }
             )
         }
 
-        composable(Routes.CORRIDA_ATIVA) {
+        composable(
+            route = "${Routes.CORRIDA_ATIVA}/{corridaId}",
+            arguments = listOf(navArgument("corridaId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val corridaId = backStackEntry.arguments?.getString("corridaId").orEmpty()
             CorridaAtivaScreen(
+                corridaId = corridaId,
                 onCorridaFinalizada = {
                     navController.navigate(Routes.HOME) {
                         popUpTo(Routes.HOME) { inclusive = true }
@@ -88,12 +101,39 @@ fun PylotoNavGraph(
             )
         }
 
+        composable(Routes.CORRIDAS) {
+            CorridasScreen(
+                onCorridaClick = { corridaId ->
+                    navController.navigate(Routes.corridaDetalhes(corridaId))
+                },
+                onHomeClick = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME) { inclusive = true }
+                    }
+                },
+                onGanhosClick = { navController.navigate(Routes.GANHOS) },
+                onPerfilClick = { navController.navigate(Routes.PERFIL) }
+            )
+        }
+
         composable(Routes.HISTORICO) {
             HistoricoScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onCorridaClick = { corridaId ->
                     navController.navigate(Routes.corridaDetalhes(corridaId))
                 }
+            )
+        }
+
+        composable(Routes.GANHOS) {
+            GanhosScreen(
+                onHomeClick = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME) { inclusive = true }
+                    }
+                },
+                onCorridasClick = { navController.navigate(Routes.CORRIDAS) },
+                onPerfilClick = { navController.navigate(Routes.PERFIL) }
             )
         }
 

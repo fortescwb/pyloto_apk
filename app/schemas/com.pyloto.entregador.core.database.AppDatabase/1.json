@@ -1,0 +1,637 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "913d5527cf1b7a216524c44e2f232031",
+    "entities": [
+      {
+        "tableName": "corridas",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `clienteNome` TEXT NOT NULL, `clienteTelefone` TEXT NOT NULL, `clienteFoto` TEXT, `enderecoOrigem` TEXT NOT NULL, `enderecoDestino` TEXT NOT NULL, `latOrigem` REAL NOT NULL, `lngOrigem` REAL NOT NULL, `latDestino` REAL NOT NULL, `lngDestino` REAL NOT NULL, `valorEntrega` REAL NOT NULL, `distanciaKm` REAL NOT NULL, `tempoEstimadoMin` INTEGER NOT NULL, `status` TEXT NOT NULL, `aceitaEm` INTEGER, `iniciadaEm` INTEGER, `coletadaEm` INTEGER, `finalizadaEm` INTEGER, `canceladaEm` INTEGER, `motivoCancelamento` TEXT, `fotoComprovanteUrl` TEXT, `sincronizado` INTEGER NOT NULL, `criadoEm` INTEGER NOT NULL, `atualizadoEm` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "clienteNome",
+            "columnName": "clienteNome",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "clienteTelefone",
+            "columnName": "clienteTelefone",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "clienteFoto",
+            "columnName": "clienteFoto",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "enderecoOrigem",
+            "columnName": "enderecoOrigem",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "enderecoDestino",
+            "columnName": "enderecoDestino",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "latOrigem",
+            "columnName": "latOrigem",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lngOrigem",
+            "columnName": "lngOrigem",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "latDestino",
+            "columnName": "latDestino",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lngDestino",
+            "columnName": "lngDestino",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "valorEntrega",
+            "columnName": "valorEntrega",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "distanciaKm",
+            "columnName": "distanciaKm",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tempoEstimadoMin",
+            "columnName": "tempoEstimadoMin",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "aceitaEm",
+            "columnName": "aceitaEm",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "iniciadaEm",
+            "columnName": "iniciadaEm",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "coletadaEm",
+            "columnName": "coletadaEm",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "finalizadaEm",
+            "columnName": "finalizadaEm",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "canceladaEm",
+            "columnName": "canceladaEm",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "motivoCancelamento",
+            "columnName": "motivoCancelamento",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "fotoComprovanteUrl",
+            "columnName": "fotoComprovanteUrl",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "sincronizado",
+            "columnName": "sincronizado",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "criadoEm",
+            "columnName": "criadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "atualizadoEm",
+            "columnName": "atualizadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_corridas_status",
+            "unique": false,
+            "columnNames": [
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_corridas_status` ON `${TABLE_NAME}` (`status`)"
+          },
+          {
+            "name": "index_corridas_sincronizado",
+            "unique": false,
+            "columnNames": [
+              "sincronizado"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_corridas_sincronizado` ON `${TABLE_NAME}` (`sincronizado`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "locations",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `latitude` REAL NOT NULL, `longitude` REAL NOT NULL, `accuracy` REAL NOT NULL, `speed` REAL NOT NULL, `bearing` REAL NOT NULL, `altitude` REAL NOT NULL, `timestamp` INTEGER NOT NULL, `corridaId` TEXT, `sincronizado` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "latitude",
+            "columnName": "latitude",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "longitude",
+            "columnName": "longitude",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "accuracy",
+            "columnName": "accuracy",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "speed",
+            "columnName": "speed",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bearing",
+            "columnName": "bearing",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "altitude",
+            "columnName": "altitude",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "corridaId",
+            "columnName": "corridaId",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "sincronizado",
+            "columnName": "sincronizado",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_locations_sincronizado",
+            "unique": false,
+            "columnNames": [
+              "sincronizado"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_locations_sincronizado` ON `${TABLE_NAME}` (`sincronizado`)"
+          },
+          {
+            "name": "index_locations_timestamp",
+            "unique": false,
+            "columnNames": [
+              "timestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_locations_timestamp` ON `${TABLE_NAME}` (`timestamp`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "entregador",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `nome` TEXT NOT NULL, `email` TEXT NOT NULL, `telefone` TEXT NOT NULL, `cpf` TEXT NOT NULL, `fotoUrl` TEXT, `veiculoTipo` TEXT, `veiculoPlaca` TEXT, `rating` REAL NOT NULL, `totalCorridas` INTEGER NOT NULL, `statusOnline` INTEGER NOT NULL, `atualizadoEm` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nome",
+            "columnName": "nome",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "email",
+            "columnName": "email",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "telefone",
+            "columnName": "telefone",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cpf",
+            "columnName": "cpf",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fotoUrl",
+            "columnName": "fotoUrl",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "veiculoTipo",
+            "columnName": "veiculoTipo",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "veiculoPlaca",
+            "columnName": "veiculoPlaca",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "rating",
+            "columnName": "rating",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalCorridas",
+            "columnName": "totalCorridas",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "statusOnline",
+            "columnName": "statusOnline",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "atualizadoEm",
+            "columnName": "atualizadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "mensagens",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `corridaId` TEXT NOT NULL, `remetenteId` TEXT NOT NULL, `remetenteTipo` TEXT NOT NULL, `conteudo` TEXT NOT NULL, `tipoMensagem` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `lida` INTEGER NOT NULL, `sincronizada` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "corridaId",
+            "columnName": "corridaId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "remetenteId",
+            "columnName": "remetenteId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "remetenteTipo",
+            "columnName": "remetenteTipo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "conteudo",
+            "columnName": "conteudo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tipoMensagem",
+            "columnName": "tipoMensagem",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lida",
+            "columnName": "lida",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sincronizada",
+            "columnName": "sincronizada",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_mensagens_corridaId",
+            "unique": false,
+            "columnNames": [
+              "corridaId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_mensagens_corridaId` ON `${TABLE_NAME}` (`corridaId`)"
+          },
+          {
+            "name": "index_mensagens_timestamp",
+            "unique": false,
+            "columnNames": [
+              "timestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_mensagens_timestamp` ON `${TABLE_NAME}` (`timestamp`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "notificacoes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `titulo` TEXT NOT NULL, `corpo` TEXT NOT NULL, `tipo` TEXT NOT NULL, `dados` TEXT, `lida` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "titulo",
+            "columnName": "titulo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "corpo",
+            "columnName": "corpo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tipo",
+            "columnName": "tipo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dados",
+            "columnName": "dados",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "lida",
+            "columnName": "lida",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_notificacoes_lida",
+            "unique": false,
+            "columnNames": [
+              "lida"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_notificacoes_lida` ON `${TABLE_NAME}` (`lida`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "sync_queue",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `operacao` TEXT NOT NULL, `endpoint` TEXT NOT NULL, `metodo` TEXT NOT NULL, `payload` TEXT NOT NULL, `tentativas` INTEGER NOT NULL, `maxTentativas` INTEGER NOT NULL, `status` TEXT NOT NULL, `prioridade` INTEGER NOT NULL, `criadoEm` INTEGER NOT NULL, `ultimaTentativaEm` INTEGER, `erroMensagem` TEXT)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "operacao",
+            "columnName": "operacao",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endpoint",
+            "columnName": "endpoint",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "metodo",
+            "columnName": "metodo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "payload",
+            "columnName": "payload",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tentativas",
+            "columnName": "tentativas",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "maxTentativas",
+            "columnName": "maxTentativas",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "prioridade",
+            "columnName": "prioridade",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "criadoEm",
+            "columnName": "criadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ultimaTentativaEm",
+            "columnName": "ultimaTentativaEm",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "erroMensagem",
+            "columnName": "erroMensagem",
+            "affinity": "TEXT",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_sync_queue_status",
+            "unique": false,
+            "columnNames": [
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_sync_queue_status` ON `${TABLE_NAME}` (`status`)"
+          },
+          {
+            "name": "index_sync_queue_prioridade",
+            "unique": false,
+            "columnNames": [
+              "prioridade"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_sync_queue_prioridade` ON `${TABLE_NAME}` (`prioridade`)"
+          },
+          {
+            "name": "index_sync_queue_criadoEm",
+            "unique": false,
+            "columnNames": [
+              "criadoEm"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_sync_queue_criadoEm` ON `${TABLE_NAME}` (`criadoEm`)"
+          }
+        ],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '913d5527cf1b7a216524c44e2f232031')"
+    ]
+  }
+}

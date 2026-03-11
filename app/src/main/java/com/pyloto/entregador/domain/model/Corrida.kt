@@ -13,7 +13,11 @@ data class Corrida(
     val status: CorridaStatus,
     val timestamps: CorridaTimestamps,
     val fotoComprovanteUrl: String? = null,
-    val motivoCancelamento: String? = null
+    val motivoCancelamento: String? = null,
+    /** Indica se a corrida é prioritária (ex.: pedido urgente) */
+    val prioridade: Boolean = false,
+    /** Quantidade de itens no pedido */
+    val itens: Int = 1
 )
 
 data class Cliente(

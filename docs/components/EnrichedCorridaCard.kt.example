@@ -1,0 +1,380 @@
+package com.pyloto.entregador.presentation.home.components
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.pyloto.entregador.domain.model.Corrida
+import com.pyloto.entregador.presentation.theme.PylotoColors
+import com.pyloto.entregador.presentation.theme.PylotoTheme
+import java.text.NumberFormat
+import java.util.Locale
+
+/**
+ * Card enriquecido de corrida com visual aprimorado
+ *
+ * Features:
+ * - Badge de prioridade em destaque
+ * - Valor com fundo dourado
+ * - Ícones coloridos para origem (verde) e destino (azul)
+ * - Informações de distância e tempo
+ * - Botões de ação estilizados
+ */
+@Composable
+fun EnrichedCorridaCard(
+    corrida: Corrida,
+    onAccept: (String) -> Unit,
+    onViewDetails: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val currencyFormatter = remember {
+        NumberFormat.getCurrencyInstance(Locale("pt", "BR"))
+    }
+
+    val isPriority = corrida.prioridade ?: false
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 4.dp
+        )
+    ) {
+        Box {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Linha 1: Valor + Info Básica
+                ValueAndInfoRow(
+                    value = corrida.valor,
+                    distance = corrida.distanciaKm,
+                    estimatedTime = corrida.tempoEstimadoMin,
+                    currencyFormatter = currencyFormatter
+                )
+
+                // Divider
+                HorizontalDivider(
+                    color = Color(0xFFE0E0E0),
+                    thickness = 1.dp
+                )
+
+                // Linha 2: Origem (Coleta)
+                LocationSection(
+                    icon = Icons.Default.Store,
+                    iconBackgroundColor = PylotoColors.MilitaryGreen,
+                    title = corrida.cliente.nome,
+                    address = corrida.origem.enderecoFormatado,
+                    additionalInfo = "${corrida.itens ?: 1} ${if (corrida.itens == 1) "item" else "itens"}"
+                )
+
+                // Divider
+                HorizontalDivider(
+                    color = Color(0xFFE0E0E0),
+                    thickness = 1.dp
+                )
+
+                // Linha 3: Destino (Entrega)
+                LocationSection(
+                    icon = Icons.Default.LocationOn,
+                    iconBackgroundColor = PylotoColors.TechBlue,
+                    title = "Endereço de entrega",
+                    address = corrida.destino.enderecoFormatado,
+                    additionalInfo = null
+                )
+
+                // Botões de Ação
+                ActionButtonsRow(
+                    onAccept = { onAccept(corrida.id) },
+                    onViewDetails = { onViewDetails(corrida.id) }
+                )
+            }
+
+            // Badge de Prioridade (posicionado no canto superior direito)
+            if (isPriority) {
+                PriorityBadge(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(12.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ValueAndInfoRow(
+    value: Double,
+    distance: Double,
+    estimatedTime: Int,
+    currencyFormatter: NumberFormat
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Valor em destaque
+        Surface(
+            color = PylotoColors.Gold,
+            shape = RoundedCornerShape(12.dp),
+            shadowElevation = 2.dp
+        ) {
+            Text(
+                text = currencyFormatter.format(value),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = PylotoColors.Black,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        }
+
+        // Info secundária (distância e tempo)
+        Column(
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Route,
+                    contentDescription = null,
+                    tint = PylotoColors.TextSecondary,
+                    modifier = Modifier.size(14.dp)
+                )
+                Text(
+                    text = String.format(Locale("pt", "BR"), "%.1f km", distance),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = PylotoColors.TextSecondary
+                )
+            }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AccessTime,
+                    contentDescription = null,
+                    tint = PylotoColors.TextSecondary,
+                    modifier = Modifier.size(14.dp)
+                )
+                Text(
+                    text = "$estimatedTime min",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = PylotoColors.TextSecondary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LocationSection(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconBackgroundColor: Color,
+    title: String,
+    address: String,
+    additionalInfo: String?
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        // Ícone circular
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(iconBackgroundColor),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        // Informações
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = PylotoColors.Black
+            )
+            Text(
+                text = address,
+                style = MaterialTheme.typography.bodyMedium,
+                color = PylotoColors.TextSecondary
+            )
+            if (additionalInfo != null) {
+                Text(
+                    text = additionalInfo,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PylotoColors.TechBlue,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActionButtonsRow(
+    onAccept: () -> Unit,
+    onViewDetails: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Botão Aceitar (primário)
+        Button(
+            onClick = onAccept,
+            modifier = Modifier.weight(1f),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = PylotoColors.MilitaryGreen,
+                contentColor = Color.White
+            ),
+            shape = RoundedCornerShape(12.dp),
+            contentPadding = PaddingValues(vertical = 12.dp)
+        ) {
+            Text(
+                text = "Aceitar",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(
+                imageVector = Icons.Default.ArrowForward,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+
+        // Botão Detalhes (secundário)
+        OutlinedButton(
+            onClick = onViewDetails,
+            modifier = Modifier.wrapContentWidth(),
+            border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
+            shape = RoundedCornerShape(12.dp),
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
+        ) {
+            Text(
+                text = "Detalhes",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Medium,
+                color = PylotoColors.TextPrimary
+            )
+        }
+    }
+}
+
+@Composable
+private fun PriorityBadge(
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        color = PylotoColors.Gold,
+        shape = RoundedCornerShape(20.dp),
+        shadowElevation = 4.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.PriorityHigh,
+                contentDescription = "Prioritário",
+                tint = PylotoColors.Black,
+                modifier = Modifier.size(16.dp)
+            )
+            Text(
+                text = "Prioritário",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = PylotoColors.Black
+            )
+        }
+    }
+}
+
+// ════════════════════════════════════════════════════════════════
+// PREVIEW
+// ════════════════════════════════════════════════════════════════
+
+@Preview(showBackground = true)
+@Composable
+private fun EnrichedCorridaCardPreview() {
+    PylotoTheme {
+        Surface(
+            color = PylotoColors.Parchment,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Mock de corrida para preview
+            val mockCorrida = Corrida(
+                id = "1",
+                cliente = Cliente(nome = "Sabor Brasileiro"),
+                origem = Endereco(
+                    enderecoFormatado = "Rua das Flores, 123",
+                    latitude = -23.55,
+                    longitude = -46.63,
+                    bairro = "Centro"
+                ),
+                destino = Endereco(
+                    enderecoFormatado = "Av. Paulista, 1578",
+                    latitude = -23.56,
+                    longitude = -46.66,
+                    bairro = "Bela Vista"
+                ),
+                valor = 18.50,
+                distanciaKm = 2.3,
+                tempoEstimadoMin = 25,
+                itens = 3,
+                prioridade = true,
+                status = "DISPONIVEL"
+            )
+
+            EnrichedCorridaCard(
+                corrida = mockCorrida,
+                onAccept = {},
+                onViewDetails = {},
+                modifier = Modifier.padding(16.dp)
+            )
+        }
+    }
+}
+
+// Mock classes para preview (remover quando integrar com o modelo real)
+private data class Cliente(val nome: String)
+private data class Endereco(
+    val enderecoFormatado: String,
+    val latitude: Double,
+    val longitude: Double,
+    val bairro: String
+)

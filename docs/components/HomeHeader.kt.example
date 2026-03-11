@@ -1,0 +1,200 @@
+package com.pyloto.entregador.presentation.home.components
+
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.pyloto.entregador.presentation.theme.PylotoColors
+import com.pyloto.entregador.presentation.theme.PylotoTheme
+
+/**
+ * Header premium da tela inicial com identidade Pyloto
+ *
+ * Features:
+ * - Logo "PYLOTO" em dourado
+ * - Toggle Online/Offline animado
+ * - Informação de localização atual
+ * - Fundo verde militar (cor dominante da marca)
+ */
+@Composable
+fun HomeHeader(
+    isOnline: Boolean,
+    cidade: String,
+    regiao: String,
+    onToggleOnline: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = PylotoColors.MilitaryGreen,
+        tonalElevation = 4.dp,
+        shadowElevation = 4.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 16.dp)
+        ) {
+            // Linha 1: Logo Pyloto + Toggle Online/Offline
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Logo Pyloto
+                Column {
+                    Text(
+                        text = "PYLOTO",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = PylotoColors.Gold,
+                        letterSpacing = 1.5.sp
+                    )
+                    Text(
+                        text = "Entregador",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.9f)
+                    )
+                }
+
+                // Toggle Online/Offline
+                OnlineToggleButton(
+                    isOnline = isOnline,
+                    onClick = onToggleOnline
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Linha 2: Localização Atual
+            LocationChip(
+                cidade = cidade,
+                regiao = regiao
+            )
+        }
+    }
+}
+
+@Composable
+private fun OnlineToggleButton(
+    isOnline: Boolean,
+    onClick: () -> Unit
+) {
+    val backgroundColor = if (isOnline) {
+        PylotoColors.Gold
+    } else {
+        Color.Gray
+    }
+
+    val textColor = if (isOnline) {
+        PylotoColors.Black
+    } else {
+        Color.White
+    }
+
+    // Animação suave de escala ao clicar
+    val scale by animateFloatAsState(
+        targetValue = 1f,
+        label = "button_scale"
+    )
+
+    Button(
+        onClick = onClick,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = backgroundColor,
+            contentColor = textColor
+        ),
+        shape = RoundedCornerShape(24.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 4.dp,
+            pressedElevation = 2.dp
+        )
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Indicador de status
+            Text(
+                text = if (isOnline) "●" else "○",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = if (isOnline) "Online" else "Offline",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+@Composable
+private fun LocationChip(
+    cidade: String,
+    regiao: String
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White.copy(alpha = 0.1f))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.Navigation,
+            contentDescription = "Localização",
+            tint = PylotoColors.Gold,
+            modifier = Modifier.size(16.dp)
+        )
+        Text(
+            text = "$cidade • $regiao",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White
+        )
+    }
+}
+
+// ════════════════════════════════════════════════════════════════
+// PREVIEW
+// ════════════════════════════════════════════════════════════════
+
+@Preview(showBackground = true)
+@Composable
+private fun HomeHeaderPreview_Online() {
+    PylotoTheme {
+        HomeHeader(
+            isOnline = true,
+            cidade = "Ponta Grossa, PR",
+            regiao = "Centro",
+            onToggleOnline = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun HomeHeaderPreview_Offline() {
+    PylotoTheme {
+        HomeHeader(
+            isOnline = false,
+            cidade = "Ponta Grossa, PR",
+            regiao = "Centro",
+            onToggleOnline = {}
+        )
+    }
+}

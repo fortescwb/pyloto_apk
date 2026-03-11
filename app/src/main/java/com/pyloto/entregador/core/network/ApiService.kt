@@ -5,10 +5,18 @@ import com.pyloto.entregador.data.remote.model.*
 import retrofit2.http.*
 
 /**
- * Interface principal do serviço de API.
- * Todos os endpoints do backend Pyloto estão centralizados aqui.
- * Para escala, endpoints podem ser divididos em interfaces menores
- * (AuthApiService, CorridaApiService, etc.) e registrados via Hilt.
+ * Interface principal do serviço de API — versão MINIMAL.
+ *
+ * Estratégia de implementação: começar pelo fluxo de autenticação
+ * para permitir testes end-to-end do caminho LoginScreen → API.
+ * Endpoints adicionais serão habilitados conforme as telas
+ * forem implementadas no fluxo do testador.
+ *
+ * Ordem planejada:
+ *   1. Auth (login/register/refresh/logout) ← ATIVO
+ *   2. Entregador (perfil, status)          ← próximo
+ *   3. Corridas (disponíveis, aceitar, etc.)
+ *   4. Chat, Notificações
  */
 interface ApiService {
 
