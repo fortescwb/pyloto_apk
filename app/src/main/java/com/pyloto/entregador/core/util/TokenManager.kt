@@ -1,26 +1,24 @@
-package com.pyloto.entregador.core.util
+﻿package com.pyloto.entregador.core.util
 
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Gerenciador de tokens JWT com DataStore.
- * Thread-safe e persistente. Suporta refresh automático.
- */
 @Singleton
 class TokenManager @Inject constructor(
     private val dataStore: DataStore<Preferences>
 ) {
 
-    companion object {
-        private val ACCESS_TOKEN_KEY = stringPreferencesKey(Constants.PREF_ACCESS_TOKEN)
-        private val REFRESH_TOKEN_KEY = stringPreferencesKey(Constants.PREF_REFRESH_TOKEN)
-        private val USER_ID_KEY = stringPreferencesKey(Constants.PREF_USER_ID)
+    private companion object {
+        val ACCESS_TOKEN_KEY = stringPreferencesKey(Constants.PREF_ACCESS_TOKEN)
+        val REFRESH_TOKEN_KEY = stringPreferencesKey(Constants.PREF_REFRESH_TOKEN)
+        val USER_ID_KEY = stringPreferencesKey(Constants.PREF_USER_ID)
     }
 
     suspend fun saveTokens(accessToken: String, refreshToken: String) {
@@ -49,11 +47,10 @@ class TokenManager @Inject constructor(
     }
 
     /**
-     * Refresh síncrono do token (usado no interceptor).
-     * TODO: Implementar chamada real ao endpoint de refresh.
+     * Refresh sincrono no interceptor nao esta habilitado neste ciclo.
+     * O refresh assinado continua via fluxo de auth da aplicacao.
      */
     fun refreshTokenSync(): String? {
-        // Placeholder: implementar com chamada síncrona ao backend
         return null
     }
 

@@ -1,11 +1,10 @@
-package com.pyloto.entregador.data.repository
+package com.pyloto.entregador.data.auth.repository
 
-import com.pyloto.entregador.BuildConfig
 import com.pyloto.entregador.core.network.ApiService
 import com.pyloto.entregador.core.util.TokenManager
-import com.pyloto.entregador.data.remote.model.LoginRequest
-import com.pyloto.entregador.data.remote.model.RefreshTokenRequest
-import com.pyloto.entregador.data.remote.model.RegisterRequest
+import com.pyloto.entregador.data.auth.remote.dto.LoginRequest
+import com.pyloto.entregador.data.auth.remote.dto.RefreshTokenRequest
+import com.pyloto.entregador.data.auth.remote.dto.RegisterRequest
 import com.pyloto.entregador.domain.model.AuthToken
 import com.pyloto.entregador.domain.model.LoginCredentials
 import com.pyloto.entregador.domain.model.RegisterData
@@ -20,16 +19,15 @@ class AuthRepositoryImpl @Inject constructor(
 ) : AuthRepository {
 
     override suspend fun login(credentials: LoginCredentials): AuthToken {
-        if (BuildConfig.DEBUG && isHardcodedDebugCredentials(credentials)) {
-            return provideHardcodedDebugToken()
-        }
-
         val response = apiService.login(
             LoginRequest(email = credentials.email, senha = credentials.senha)
         )
+        val refreshToken = response.data.refreshToken?.ifBlank { response.data.accessToken }
+            ?: response.data.accessToken
+
         val token = AuthToken(
             accessToken = response.data.accessToken,
-            refreshToken = "",
+            refreshToken = refreshToken,
             userId = response.data.parceiro?.id ?: "",
             expiresIn = 3600L
         )
@@ -49,9 +47,12 @@ class AuthRepositoryImpl @Inject constructor(
                 veiculoTipo = data.veiculoTipo.name
             )
         )
+        val refreshToken = response.data.refreshToken?.ifBlank { response.data.accessToken }
+            ?: response.data.accessToken
+
         val token = AuthToken(
             accessToken = response.data.accessToken,
-            refreshToken = "",
+            refreshToken = refreshToken,
             userId = response.data.parceiro?.id ?: "",
             expiresIn = 3600L
         )
@@ -62,19 +63,23 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun refreshToken(): AuthToken {
         val currentRefreshToken = tokenManager.getRefreshToken()
+            ?.ifBlank { tokenManager.getAccessToken() }
             ?: throw IllegalStateException("No refresh token available")
 
         val response = apiService.refreshToken(
             RefreshTokenRequest(refreshToken = currentRefreshToken)
         )
-        // Backend stub: retorna access_token vazio; preservar token atual se resposta inválida
+
         val newAccessToken = response.data.accessToken.ifBlank {
-            tokenManager.getAccessToken() ?: throw IllegalStateException("Token inválido")
+            throw IllegalStateException("Refresh endpoint retornou access_token vazio")
         }
+        val newRefreshToken = response.data.refreshToken?.ifBlank { currentRefreshToken }
+            ?: currentRefreshToken
         val userId = response.data.parceiro?.id ?: tokenManager.getUserId() ?: ""
+
         val token = AuthToken(
             accessToken = newAccessToken,
-            refreshToken = currentRefreshToken,
+            refreshToken = newRefreshToken,
             userId = userId,
             expiresIn = 3600L
         )
@@ -94,28 +99,5 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun isLoggedIn(): Boolean {
         return tokenManager.isLoggedIn()
-    }
-
-    private suspend fun provideHardcodedDebugToken(): AuthToken {
-        val token = AuthToken(
-            accessToken = "debug-access-token",
-            refreshToken = "debug-refresh-token",
-            userId = "debug-entregador",
-            expiresIn = 31_536_000L
-        )
-        tokenManager.saveTokens(token.accessToken, token.refreshToken)
-        tokenManager.saveUserId(token.userId)
-        return token
-    }
-
-    private fun isHardcodedDebugCredentials(credentials: LoginCredentials): Boolean {
-        val email = credentials.email.trim()
-        val senha = credentials.senha.trim()
-        return email.equals(DEBUG_TEST_EMAIL, ignoreCase = true) && senha == DEBUG_TEST_PASSWORD
-    }
-
-    companion object {
-        const val DEBUG_TEST_EMAIL = "teste@pyloto.com"
-        const val DEBUG_TEST_PASSWORD = "senha123"
     }
 }

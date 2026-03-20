@@ -36,11 +36,14 @@ class AuthInterceptor @Inject constructor(
         }
 
         val token = tokenManager.getAccessToken()
-        val authenticatedRequest = originalRequest.newBuilder()
-            .header("Authorization", "Bearer $token")
+            ?.takeIf { it.isNotBlank() }
+        val builder = originalRequest.newBuilder()
             .header("Content-Type", "application/json")
             .header("Accept", "application/json")
-            .build()
+        if (token != null) {
+            builder.header("Authorization", "Bearer $token")
+        }
+        val authenticatedRequest = builder.build()
 
         val response = chain.proceed(authenticatedRequest)
 

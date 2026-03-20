@@ -30,6 +30,12 @@ object Constants {
     const val PREF_USER_ID = "user_id"
     const val PREF_IS_ONLINE = "is_online"
     const val PREF_ONBOARDING_COMPLETE = "onboarding_complete"
+    const val PREF_DAILY_GOAL = "daily_goal"
+    const val PREF_WEEKLY_GOAL = "weekly_goal"
+
+    // Default values
+    const val DEFAULT_DAILY_GOAL = 300.0
+    const val DEFAULT_WEEKLY_GOAL = 1500.0
 
     // WorkManager Tags
     const val WORK_SYNC_LOCATIONS = "sync_locations"

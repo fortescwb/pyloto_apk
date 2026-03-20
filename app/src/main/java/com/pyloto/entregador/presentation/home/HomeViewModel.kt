@@ -1,16 +1,24 @@
-package com.pyloto.entregador.presentation.home
+﻿package com.pyloto.entregador.presentation.home
 
 import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.pyloto.entregador.domain.model.Corrida
-import com.pyloto.entregador.domain.model.DailyStats
+import com.pyloto.entregador.domain.repository.LocationRepository
+import com.pyloto.entregador.domain.repository.PreferencesRepository
 import com.pyloto.entregador.domain.usecase.corrida.AceitarCorridaUseCase
 import com.pyloto.entregador.domain.usecase.corrida.ObterCorridasDisponiveisUseCase
-import com.pyloto.entregador.domain.repository.LocationRepository
+import com.pyloto.entregador.domain.usecase.entregador.AtualizarStatusOnlineUseCase
+import com.pyloto.entregador.domain.usecase.home.ObterDailyStatsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -18,7 +26,10 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val obterCorridasUseCase: ObterCorridasDisponiveisUseCase,
     private val aceitarCorridaUseCase: AceitarCorridaUseCase,
-    private val locationRepository: LocationRepository
+    private val atualizarStatusOnlineUseCase: AtualizarStatusOnlineUseCase,
+    private val obterDailyStatsUseCase: ObterDailyStatsUseCase,
+    private val locationRepository: LocationRepository,
+    private val preferencesRepository: PreferencesRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -30,12 +41,21 @@ class HomeViewModel @Inject constructor(
     private var loadCorridasJob: Job? = null
 
     init {
-        observarLocalizacao()
+        observeGoals()
+        observeLocation()
         loadCorridas()
         loadDailyStats()
     }
 
-    private fun observarLocalizacao() {
+    private fun observeGoals() {
+        viewModelScope.launch {
+            preferencesRepository.observeDailyGoal().collect { goal ->
+                _uiState.update { state -> state.copy(dailyGoal = goal) }
+            }
+        }
+    }
+
+    private fun observeLocation() {
         viewModelScope.launch {
             locationRepository.getLastLocation().collect { location ->
                 _uiState.update { state ->
@@ -62,11 +82,11 @@ class HomeViewModel @Inject constructor(
         loadCorridasJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, erro = null) }
             obterCorridasUseCase(raio)
-                .catch { e ->
+                .catch { error ->
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            erro = e.message ?: "Erro ao carregar corridas"
+                            erro = error.message ?: "Erro ao carregar corridas"
                         )
                     }
                 }
@@ -89,103 +109,56 @@ class HomeViewModel @Inject constructor(
                     _events.emit(HomeEvent.CorridaAceita(corridaId))
                     loadCorridas()
                 }
-                .onFailure { e ->
+                .onFailure { error ->
                     _uiState.update {
-                        it.copy(erro = e.message ?: "Erro ao aceitar corrida")
+                        it.copy(erro = error.message ?: "Erro ao aceitar corrida")
                     }
                 }
         }
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // NOVOS MÉTODOS — Redesign Home Screen
-    // ═══════════════════════════════════════════════════════════
-
-    /**
-     * Alterna o status online/offline do entregador.
-     * TODO: Sincronizar com o backend quando o endpoint estiver pronto.
-     */
     fun toggleOnlineStatus() {
-        _uiState.update { it.copy(isOnline = !it.isOnline) }
-        // TODO: Implementar lógica de sincronização com backend
-        // ex: entregadorRepository.setOnlineStatus(uiState.value.isOnline)
-    }
-
-    /**
-     * Carrega as estatísticas do dia do entregador.
-     * TODO: Buscar dados reais do repositório / CORE API.
-     * Por ora, utiliza dados scaffold/placeholder.
-     */
-    fun loadDailyStats() {
         viewModelScope.launch {
-            // TODO: Substituir por chamada real ao repositório
-            // val stats = dailyStatsRepository.getToday()
-            _uiState.update {
-                it.copy(
-                    dailyStats = DailyStats(
-                        earnings = 245.50,
-                        deliveries = 12,
-                        timeOnlineMinutes = 332,
-                        maxTimeMinutes = 600,
-                        totalFeeSavings = 24.55,
-                        averagePerHour = 44.51
-                    )
-                )
+            val newStatus = !_uiState.value.isOnline
+            runCatching {
+                atualizarStatusOnlineUseCase(newStatus)
+            }.onSuccess {
+                _uiState.update { state -> state.copy(isOnline = newStatus, erro = null) }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(erro = error.message ?: "Erro ao atualizar status online")
+                }
             }
         }
     }
 
-    /**
-     * Atualiza a meta diária configurada pelo entregador.
-     * TODO: Persistir em SharedPreferences ou no backend.
-     */
+    fun loadDailyStats() {
+        viewModelScope.launch {
+            runCatching {
+                obterDailyStatsUseCase()
+            }.onSuccess { stats ->
+                _uiState.update { state -> state.copy(dailyStats = stats, erro = null) }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(erro = error.message ?: "Erro ao carregar estatisticas")
+                }
+            }
+        }
+    }
+
     fun updateDailyGoal(newGoal: Double) {
-        _uiState.update { it.copy(dailyGoal = newGoal) }
-        // TODO: Persistir no DataStore / SharedPreferences
-        // ex: preferencesRepository.setDailyGoal(newGoal)
+        viewModelScope.launch {
+            preferencesRepository.saveDailyGoal(newGoal)
+        }
     }
 
     private fun Location.toHomeLocation(): HomeLocation {
         return HomeLocation(latitude = latitude, longitude = longitude)
     }
 
-    companion object {
-        private const val RAIO_PADRAO_METROS = 5000
-        private const val RAIO_MAPA_METROS = 200
+    private companion object {
+        const val RAIO_PADRAO_METROS = 5000
+        const val RAIO_MAPA_METROS = 200
     }
 }
 
-data class HomeUiState(
-    // ── Estado original ──────────────────────────────────────
-    val isLoading: Boolean = true,
-    val modoVisualizacao: HomeModoVisualizacao = HomeModoVisualizacao.PADRAO,
-    val corridas: List<Corrida> = emptyList(),
-    val localizacaoAtual: HomeLocation? = null,
-    val erro: String? = null,
-
-    // ── Novos campos — Redesign ──────────────────────────────
-    /** Status online/offline do entregador */
-    val isOnline: Boolean = false,
-    /** Cidade atual do entregador */
-    val cidadeAtual: String = "Ponta Grossa, PR",
-    /** Região/bairro atual do entregador */
-    val regiaoAtual: String = "Centro",
-    /** Estatísticas do dia (scaffold/placeholder por ora) */
-    val dailyStats: DailyStats = DailyStats(),
-    /** Meta diária configurável em R$ */
-    val dailyGoal: Double = 300.0
-)
-
-enum class HomeModoVisualizacao {
-    PADRAO,
-    MAPA
-}
-
-data class HomeLocation(
-    val latitude: Double,
-    val longitude: Double
-)
-
-sealed class HomeEvent {
-    data class CorridaAceita(val corridaId: String) : HomeEvent()
-}

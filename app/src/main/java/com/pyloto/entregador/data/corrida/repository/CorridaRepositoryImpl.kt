@@ -1,11 +1,14 @@
-package com.pyloto.entregador.data.repository
+package com.pyloto.entregador.data.corrida.repository
 
 import com.pyloto.entregador.core.database.dao.CorridaDao
 import com.pyloto.entregador.core.network.ApiService
 import com.pyloto.entregador.core.network.ConnectivityMonitor
-import com.pyloto.entregador.data.local.mapper.CorridaMapper
-import com.pyloto.entregador.data.remote.model.CancelamentoRequest
-import com.pyloto.entregador.data.remote.model.FinalizacaoRequest
+import com.pyloto.entregador.data.common.withCacheFallback
+import com.pyloto.entregador.data.common.withFallbackValue
+import com.pyloto.entregador.data.common.withNetworkGuard
+import com.pyloto.entregador.data.corrida.mapper.CorridaMapper
+import com.pyloto.entregador.data.corrida.remote.dto.CancelamentoRequest
+import com.pyloto.entregador.data.corrida.remote.dto.FinalizacaoRequest
 import com.pyloto.entregador.domain.model.Corrida
 import com.pyloto.entregador.domain.repository.CorridaRepository
 import kotlinx.coroutines.flow.Flow
@@ -27,33 +30,36 @@ class CorridaRepositoryImpl @Inject constructor(
 ) : CorridaRepository {
 
     override suspend fun getCorridasDisponiveis(lat: Double, lng: Double, raio: Int): List<Corrida> {
-        return try {
-            if (connectivityMonitor.isCurrentlyConnected()) {
+        return withNetworkGuard(
+            operation = "corridas_disponiveis",
+            isConnected = connectivityMonitor.isCurrentlyConnected(),
+            remote = {
                 val response = apiService.getCorridasDisponiveis(lat, lng, raio)
                 val corridas = response.data.map { mapper.toDomain(it) }
-                // Cache local
                 corridaDao.insertAll(corridas.map { mapper.toEntity(it) })
                 corridas
-            } else {
-                corridaDao.getDisponiveis().map { mapper.toDomain(it) }
+            },
+            local = {
+                corridaDao.getDisponiveis().map(mapper::toDomain)
             }
-        } catch (e: Exception) {
-            // Fallback para cache
-            corridaDao.getDisponiveis().map { mapper.toDomain(it) }
-        }
+        )
     }
 
     override suspend fun getCorridaDetalhes(corridaId: String): Corrida {
-        return try {
-            val response = apiService.getCorridaDetalhes(corridaId)
-            val corrida = mapper.toDomain(response.data)
-            corridaDao.insert(mapper.toEntity(corrida))
-            corrida
-        } catch (e: Exception) {
-            val entity = corridaDao.getById(corridaId)
-                ?: throw e
-            mapper.toDomain(entity)
-        }
+        return withCacheFallback(
+            operation = "corrida_detalhes",
+            remote = {
+                val response = apiService.getCorridaDetalhes(corridaId)
+                val corrida = mapper.toDomain(response.data)
+                corridaDao.insert(mapper.toEntity(corrida))
+                corrida
+            },
+            local = {
+                val entity = corridaDao.getById(corridaId)
+                    ?: throw IllegalStateException("Corrida $corridaId nao encontrada no cache")
+                mapper.toDomain(entity)
+            }
+        )
     }
 
     override suspend fun aceitarCorrida(corridaId: String): Corrida {
@@ -96,11 +102,12 @@ class CorridaRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getHistoricoPaginado(page: Int, size: Int): List<Corrida> {
-        return try {
+        return withFallbackValue(
+            operation = "corridas_historico",
+            fallbackValue = emptyList()
+        ) {
             val response = apiService.getHistoricoCorridas(page, size)
-            response.data.content.map { mapper.toDomain(it) }
-        } catch (e: Exception) {
-            emptyList()
+            response.data.items.map { mapper.toDomain(it) }
         }
     }
 }

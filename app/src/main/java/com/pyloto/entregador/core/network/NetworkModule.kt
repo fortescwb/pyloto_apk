@@ -1,6 +1,7 @@
 package com.pyloto.entregador.core.network
 
 import com.pyloto.entregador.core.network.interceptor.AuthInterceptor
+import com.pyloto.entregador.core.network.interceptor.NetworkTraceInterceptor
 import com.pyloto.entregador.BuildConfig
 import dagger.Module
 import dagger.Provides
@@ -21,6 +22,9 @@ object NetworkModule {
     @Singleton
     fun provideLoggingInterceptor(): HttpLoggingInterceptor {
         return HttpLoggingInterceptor().apply {
+            redactHeader("Authorization")
+            redactHeader("Cookie")
+            redactHeader("Set-Cookie")
             level = if (BuildConfig.DEBUG) {
                 HttpLoggingInterceptor.Level.BODY
             } else {
@@ -32,10 +36,12 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideOkHttpClient(
+        networkTraceInterceptor: NetworkTraceInterceptor,
         authInterceptor: AuthInterceptor,
         loggingInterceptor: HttpLoggingInterceptor
     ): OkHttpClient {
         return OkHttpClient.Builder()
+            .addInterceptor(networkTraceInterceptor)
             .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)

@@ -1,26 +1,37 @@
-package com.pyloto.entregador.core.network
+﻿package com.pyloto.entregador.core.network
 
-import com.pyloto.entregador.core.network.model.*
-import com.pyloto.entregador.data.remote.model.*
-import retrofit2.http.*
+import com.pyloto.entregador.core.network.model.ApiResponse
+import com.pyloto.entregador.core.network.model.PaginatedResponse
+import com.pyloto.entregador.data.auth.remote.dto.AuthToken
+import com.pyloto.entregador.data.auth.remote.dto.LoginRequest
+import com.pyloto.entregador.data.auth.remote.dto.RefreshTokenRequest
+import com.pyloto.entregador.data.auth.remote.dto.RegisterRequest
+import com.pyloto.entregador.data.chat.remote.dto.EnviarMensagemRequest
+import com.pyloto.entregador.data.chat.remote.dto.MensagemResponse
+import com.pyloto.entregador.data.corrida.remote.dto.CancelamentoRequest
+import com.pyloto.entregador.data.corrida.remote.dto.CorridaDetalhesResponse
+import com.pyloto.entregador.data.corrida.remote.dto.CorridaResponse
+import com.pyloto.entregador.data.corrida.remote.dto.FinalizacaoRequest
+import com.pyloto.entregador.data.entregador.remote.dto.AtualizarPerfilRequest
+import com.pyloto.entregador.data.entregador.remote.dto.EntregadorPerfilResponse
+import com.pyloto.entregador.data.entregador.remote.dto.StatusRequest
+import com.pyloto.entregador.data.ganhos.remote.dto.GanhosResponse
+import com.pyloto.entregador.data.location.remote.dto.LocationUpdate
+import com.pyloto.entregador.data.notificacao.remote.dto.FCMTokenRequest
+import com.pyloto.entregador.data.notificacao.remote.dto.NotificacaoResponse
+import retrofit2.http.Body
+import retrofit2.http.GET
+import retrofit2.http.POST
+import retrofit2.http.PUT
+import retrofit2.http.Path
+import retrofit2.http.Query
 
 /**
- * Interface principal do serviço de API — versão MINIMAL.
+ * Contrato HTTP do app parceiro com o backend pyloto_atende.
  *
- * Estratégia de implementação: começar pelo fluxo de autenticação
- * para permitir testes end-to-end do caminho LoginScreen → API.
- * Endpoints adicionais serão habilitados conforme as telas
- * forem implementadas no fluxo do testador.
- *
- * Ordem planejada:
- *   1. Auth (login/register/refresh/logout) ← ATIVO
- *   2. Entregador (perfil, status)          ← próximo
- *   3. Corridas (disponíveis, aceitar, etc.)
- *   4. Chat, Notificações
+ * Mantem somente definicoes de endpoint, sem regra de negocio.
  */
 interface ApiService {
-
-    // ==================== AUTH ====================
 
     @POST("auth/login")
     suspend fun login(@Body request: LoginRequest): ApiResponse<AuthToken>
@@ -33,8 +44,6 @@ interface ApiService {
 
     @POST("auth/logout")
     suspend fun logout(): ApiResponse<Unit>
-
-    // ==================== CORRIDAS ====================
 
     @GET("corridas/disponiveis")
     suspend fun getCorridasDisponiveis(
@@ -73,8 +82,6 @@ interface ApiService {
         @Query("size") size: Int = 20
     ): ApiResponse<PaginatedResponse<CorridaResponse>>
 
-    // ==================== ENTREGADOR ====================
-
     @POST("entregador/localizacao")
     suspend fun atualizarLocalizacao(@Body location: LocationUpdate): ApiResponse<Unit>
 
@@ -92,12 +99,10 @@ interface ApiService {
 
     @GET("entregador/ganhos")
     suspend fun getGanhos(
-        @Query("periodo") periodo: String, // DIARIO, SEMANAL, MENSAL
-        @Query("dataInicio") dataInicio: String?,
-        @Query("dataFim") dataFim: String?
+        @Query("periodo") periodo: String,
+        @Query("data_inicio") dataInicio: String?,
+        @Query("data_fim") dataFim: String?
     ): ApiResponse<GanhosResponse>
-
-    // ==================== CHAT ====================
 
     @GET("chat/{corridaId}/mensagens")
     suspend fun getMensagens(
@@ -105,13 +110,11 @@ interface ApiService {
         @Query("page") page: Int = 0
     ): ApiResponse<PaginatedResponse<MensagemResponse>>
 
-    @POST("chat/{corridaId}/mensagem")
+    @POST("chat/{corridaId}/mensagens")
     suspend fun enviarMensagem(
         @Path("corridaId") corridaId: String,
         @Body mensagem: EnviarMensagemRequest
     ): ApiResponse<MensagemResponse>
-
-    // ==================== NOTIFICAÇÕES ====================
 
     @POST("notificacoes/token")
     suspend fun registrarTokenFCM(@Body token: FCMTokenRequest): ApiResponse<Unit>
