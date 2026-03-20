@@ -1,502 +1,473 @@
-# Contratos de API - pyloto_apk
+﻿# Contratos de API - pyloto_app-parceiro
 
-Backend: **pyloto_atende** (FastAPI)
-Documentacao de arquitetura: [ARQUITETURA-COMUNICACAO.md](./ARQUITETURA-COMUNICACAO.md)
+Backend de referencia: `pyloto_atende` (FastAPI)
 
-## Base URLs
+## Base URL auditada
 
 | Ambiente | URL |
 |---|---|
-| Staging | `https://staging-api.pyloto.com.br/v1/` |
-| Production | `https://api.pyloto.com.br/v1/` |
+| Staging | `https://pyloto-atende-350969174034.us-central1.run.app/` |
+| Production | `https://pyloto-atende-350969174034.us-central1.run.app/` |
 
-## Autenticacao
+Observacao: o backend real nao usa prefixo `/v1`.
 
-Todas as rotas (exceto `/auth/login` e `/auth/register`) exigem:
-```
-Authorization: Bearer <access_token>
-```
+## Envelope padrao
 
-O `AuthInterceptor` tenta renovar automaticamente com `POST /auth/refresh` ao receber HTTP 401.
-
----
-
-## Auth
-
-| Metodo | Endpoint | Descricao |
-|---|---|---|
-| POST | `/auth/login` | Login com email + senha |
-| POST | `/auth/register` | Cadastro de novo parceiro |
-| POST | `/auth/refresh` | Renovar access token |
-| POST | `/auth/logout` | Logout (invalida token no Redis) |
-
-### POST /auth/register
+As rotas do app usam envelope padrao:
 
 ```json
-// Request
 {
-  "nome": "Carlos Silva",
-  "email": "carlos@email.com",
-  "senha": "senha123",
-  "telefone": "42999991111",
-  "cpf": "123.456.789-00",
-  "tipo": "entregador",
-  "tipo_veiculo": "moto",
-  "placa": "ABC-1234"
+  "success": true,
+  "data": {},
+  "message": "opcional",
+  "meta": {}
 }
-
-// tipo: entregador | diarista | pedreiro | pintor | marido_aluguel
-// tipo_veiculo e placa: obrigatorios apenas para tipo=entregador
 ```
 
+Em erro, o backend responde no formato de `AppError`:
+
 ```json
-// Response 201
+{
+  "ok": false,
+  "code": "UNAUTHORIZED",
+  "message": "Credenciais invalidas",
+  "retryable": false
+}
+```
+
+## Headers obrigatorios
+
+- Rotas protegidas: `Authorization: Bearer <access_token>`
+- `Content-Type: application/json`
+
+## Contrato por rota (fonte de verdade: pyloto_atende)
+
+### Auth
+
+#### POST `/auth/login`
+
+Request:
+
+```json
+{
+  "email": "entregador@pyloto.com",
+  "senha": "Senha@123"
+}
+```
+
+Response `200`:
+
+```json
 {
   "success": true,
   "data": {
     "access_token": "<jwt>",
+    "refresh_token": "<jwt>",
     "token_type": "bearer",
     "parceiro": {
-      "id": "par_abc123",
-      "nome": "Carlos Silva",
-      "tipo": "entregador",
-      "status": "pendente"
+      "id": "par-123",
+      "nome": "Entregador",
+      "email": "entregador@pyloto.com"
     }
   }
 }
-// status "pendente": aguarda aprovacao manual da Pyloto. Exibir tela "Cadastro em Analise".
-// status "ativo": pode receber pedidos.
 ```
 
-### POST /auth/refresh
+#### POST `/auth/register`
+
+Request:
 
 ```json
-// Request
-{ "refresh_token": "<refresh_token>" }
-
-// Response 200
 {
-  "success": true,
-  "data": { "access_token": "<novo_jwt>", "token_type": "bearer" }
+  "nome": "Entregador Teste",
+  "email": "entregador@pyloto.com",
+  "senha": "Senha@123",
+  "telefone": "11999999999",
+  "cpf": "12345678900",
+  "tipo_veiculo": "MOTO",
+  "placa": "ABC1234"
 }
 ```
 
----
+Response `200`: mesmo shape de `/auth/login`.
 
-## Pedidos (alias: Corridas no APK)
+#### POST `/auth/refresh`
 
-"Corrida" e o nome interno do APK para qualquer tipo de pedido/servico.
-
-| Metodo | Endpoint | Descricao |
-|---|---|---|
-| GET | `/corridas/disponiveis` | Pedidos proximos ao parceiro |
-| GET | `/corridas/{id}` | Detalhes de um pedido |
-| POST | `/corridas/{id}/aceitar` | Parceiro aceita o pedido |
-| POST | `/corridas/{id}/iniciar` | Parceiro inicia a execucao |
-| POST | `/corridas/{id}/coletar` | Parceiro confirma coleta (so entregador) |
-| POST | `/corridas/{id}/finalizar` | Parceiro finaliza o pedido |
-| POST | `/corridas/{id}/cancelar` | Parceiro cancela o pedido |
-| GET | `/corridas/historico` | Historico paginado do parceiro |
-
-### GET /corridas/disponiveis
-
-```
-Query params:
-  lat: float (obrigatorio)
-  lng: float (obrigatorio)
-  raio: int (metros, default 5000, min 100, max 50000)
-  tipo: string (opcional — filtra pelo tipo_servico do pedido)
-```
+Request:
 
 ```json
-// Response 200
+{ "refresh_token": "<jwt>" }
+```
+
+Response `200`:
+
+```json
+{
+  "success": true,
+  "data": {
+    "access_token": "<jwt>",
+    "refresh_token": "<jwt>",
+    "token_type": "bearer"
+  }
+}
+```
+
+Erros relevantes: `401` quando token ausente/invalido/expirado.
+
+#### POST `/auth/logout`
+
+Response `200`:
+
+```json
+{ "success": true, "data": null }
+```
+
+### Corridas
+
+#### GET `/corridas/disponiveis`
+
+Query params:
+
+- `lat` (obrigatorio, number)
+- `lng` (obrigatorio, number)
+- `raio` (opcional, default `5000`)
+- `tipo` (opcional)
+
+Response `200`:
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "PED-001",
+      "status": "disponivel",
+      "valor_parceiro": 22.5,
+      "endereco_origem": { "rua": "Rua A", "lat": -23.55, "lng": -46.63 },
+      "endereco_destino": { "rua": "Rua B", "lat": -23.56, "lng": -46.64 },
+      "dados": { "nome": "Cliente" },
+      "created_at": 1741290000
+    }
+  ],
+  "meta": { "total": 1, "page": 0, "size": 1, "has_next": false }
+}
+```
+
+#### GET `/corridas/{id}`
+
+Response `200`:
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "PED-001",
+    "status": "aceito",
+    "wa_id": "5511999999999",
+    "valor_parceiro": 22.5,
+    "endereco_origem": {},
+    "endereco_destino": {},
+    "dados": {},
+    "created_at": 1741290000,
+    "aceito_at": 1741290100
+  }
+}
+```
+
+#### POST `/corridas/{id}/aceitar`
+
+Response `200`: envelope com `data` do pedido atualizado.
+
+#### POST `/corridas/{id}/iniciar`
+
+Response `200`:
+
+```json
+{ "success": true, "data": null, "message": "Corrida iniciada" }
+```
+
+#### POST `/corridas/{id}/coletar`
+
+Response `200`:
+
+```json
+{ "success": true, "data": null, "message": "Coleta registrada" }
+```
+
+#### POST `/corridas/{id}/finalizar`
+
+Request:
+
+```json
+{ "foto_comprovante_url": "https://..." }
+```
+
+Response `200`:
+
+```json
+{ "success": true, "data": null, "message": "Corrida finalizada" }
+```
+
+#### POST `/corridas/{id}/cancelar`
+
+Request:
+
+```json
+{ "motivo": "nao foi possivel concluir" }
+```
+
+Response `200`:
+
+```json
+{ "success": true, "data": null, "message": "Corrida cancelada" }
+```
+
+#### GET `/corridas/historico`
+
+Query params:
+
+- `page` (default `0`)
+- `size` (default `20`)
+
+Response `200`:
+
+```json
 {
   "success": true,
   "data": {
     "items": [
-      {
-        "id": "ped_xyz",
-        "tipo_servico": "entrega",
-        "endereco_origem": { "logradouro": "Rua A, 100", "bairro": "Centro" },
-        "endereco_destino": { "logradouro": "Rua B, 200", "bairro": "Jardim" },
-        "distancia_km": 3.2,
-        "tempo_estimado_min": 15,
-        "valor_parceiro": 22.50,
-        "criado_ha": "5 min"
-      }
+      { "id": "PED-001", "status": "finalizado" }
     ],
-    "total": 3
-  }
-}
-```
-
-O filtro por `tipo` respeita o tipo do parceiro autenticado: um parceiro do tipo `diarista`
-so ve pedidos de `diarista`, independente do filtro enviado.
-
-### GET /corridas/{id}
-
-```json
-// Response 200
-{
-  "success": true,
-  "data": {
-    "id": "ped_xyz",
-    "tipo_servico": "entrega",
-    "status": "pago_aguardando_parceiro",
-    "wa_id": "5542999990000",
-    "solicitante_nome": "Joao P.",
-    "endereco_origem": {
-      "logradouro": "Rua A, 100", "bairro": "Centro",
-      "lat": -25.38, "lng": -49.26
-    },
-    "endereco_destino": {
-      "logradouro": "Rua B, 200", "bairro": "Jardim",
-      "lat": -25.40, "lng": -49.28
-    },
-    "endereco_servico": {},
-    "valor_parceiro": 22.50,
-    "dados": {},
-    "etapas": [],
-    "parceiro_id": null,
-    "created_at": 1741290000
-  }
-}
-```
-
-### POST /corridas/{id}/aceitar
-
-Sem body. Retorna o pedido atualizado com `status: "parceiro_aceito"`.
-Ao aceitar, o solicitante recebe mensagem automatica via WhatsApp (numero principal):
-"Seu pedido foi aceito por [Nome do Parceiro]! Acompanhe em: pyloto.com.br/acompanhar/{id}"
-
-### POST /corridas/{id}/iniciar
-
-Sem body. Muda status para `em_execucao`. Para entregadores: inicia rastreamento GPS ativo.
-
-### POST /corridas/{id}/coletar
-
-Sem body. Apenas para `tipo_servico=entrega`. Registra etapa de coleta.
-
-### POST /corridas/{id}/finalizar
-
-```json
-// Request (opcional)
-{ "foto_comprovante_url": "https://storage.googleapis.com/pyloto/comprovante_xyz.jpg" }
-```
-
-Muda status para `concluido`. Dispara avaliacao pelo WhatsApp ao solicitante.
-
-### POST /corridas/{id}/cancelar
-
-```json
-// Request
-{ "motivo": "Nao consigo chegar ao local" }
-```
-
-### GET /corridas/historico
-
-```
-Query params:
-  page: int (default 0)
-  size: int (default 20, max 100)
-```
-
-```json
-// Response 200
-{
-  "success": true,
-  "data": {
-    "items": [ /* lista de pedidos concluidos/cancelados */ ],
     "page": 0,
     "size": 20,
-    "total": 47,
-    "has_next": true
-  }
-}
-```
-
----
-
-## Parceiro
-
-| Metodo | Endpoint | Descricao |
-|---|---|---|
-| GET | `/entregador/perfil` | Perfil do parceiro autenticado |
-| PUT | `/entregador/perfil` | Atualizar dados do perfil |
-| POST | `/entregador/localizacao` | Enviar ponto GPS |
-| POST | `/entregador/localizacao/batch` | Enviar lote de pontos GPS (offline-first) |
-| POST | `/entregador/status` | Ficar online/offline |
-| GET | `/entregador/ganhos` | Ganhos por periodo |
-
-### GET /entregador/perfil
-
-```json
-// Response 200
-{
-  "success": true,
-  "data": {
-    "id": "par_abc123",
-    "nome": "Carlos Silva",
-    "email": "carlos@email.com",
-    "telefone": "42999991111",
-    "tipo": "entregador",
-    "status": "ativo",
-    "disponivel": true,
-    "online": true,
-    "veiculo_tipo": "moto",
-    "veiculo_placa": "ABC-1234",
-    "nota_media": 4.8,
-    "total_corridas": 152,
-    "total_ganho": 3850.00,
-    "foto_url": "https://...",
-    "created_at": 1700000000
-  }
-}
-```
-
-### POST /entregador/localizacao
-
-```json
-// Request
-{
-  "latitude": -25.3845,
-  "longitude": -49.2654,
-  "timestamp": "2026-03-06T14:30:00Z",
-  "accuracy": 8.5,
-  "speed": 12.3,
-  "bearing": 270.0
-}
-```
-
-### POST /entregador/localizacao/batch
-
-```json
-// Request — array de LocationUpdate
-[
-  { "latitude": -25.38, "longitude": -49.26, "timestamp": "2026-03-06T14:30:00Z" },
-  { "latitude": -25.39, "longitude": -49.27, "timestamp": "2026-03-06T14:30:10Z" }
-]
-```
-
-### POST /entregador/status
-
-```json
-// Request
-{ "disponivel": true }
-// disponivel=true: parceiro esta online e aceitando pedidos
-// disponivel=false: parceiro esta offline
-```
-
-### GET /entregador/ganhos
-
-```
-Query params:
-  periodo: DIARIO | SEMANAL | MENSAL | PERSONALIZADO (default DIARIO)
-  data_inicio: ISO date (obrigatorio quando periodo=PERSONALIZADO)
-  data_fim: ISO date (obrigatorio quando periodo=PERSONALIZADO)
-```
-
-```json
-// Response 200
-{
-  "success": true,
-  "data": {
-    "total_bruto": 150.00,
-    "taxa_pyloto": 22.50,
-    "total_liquido": 127.50,
-    "total_corridas": 8,
-    "nota_media": 4.9,
-    "extrato": [
-      {
-        "pedido_id": "ped_xyz",
-        "tipo_servico": "entrega",
-        "valor": 22.50,
-        "concluido_at": 1741290000
-      }
-    ]
-  }
-}
-```
-
----
-
-## Chat (Comunicacao Parceiro <-> Solicitante)
-
-O chat usa o **canal parceiro** (segundo numero WhatsApp Business) como ponte.
-Ver [ARQUITETURA-COMUNICACAO.md](./ARQUITETURA-COMUNICACAO.md) para fluxo completo.
-
-| Metodo | Endpoint | Descricao |
-|---|---|---|
-| GET | `/chat/{pedidoId}/mensagens` | Historico de mensagens do pedido |
-| POST | `/chat/{pedidoId}/mensagens` | Enviar mensagem ao solicitante |
-| POST | `/chat/{pedidoId}/chamar` | Iniciar chamada com o solicitante |
-
-### GET /chat/{pedidoId}/mensagens
-
-```
-Query params:
-  page: int (default 0)
-  size: int (default 50)
-```
-
-```json
-// Response 200
-{
-  "success": true,
-  "data": {
-    "items": [
-      {
-        "id": "msg_abc",
-        "de": "parceiro",
-        "conteudo": "Cheguei no local de coleta!",
-        "tipo": "texto",
-        "status": "entregue",
-        "created_at": 1741290000
-      },
-      {
-        "id": "msg_def",
-        "de": "solicitante",
-        "conteudo": "Ok, pode subir!",
-        "tipo": "texto",
-        "status": "lido",
-        "created_at": 1741290060
-      }
-    ],
-    "total": 2,
+    "total": 1,
     "has_next": false
   }
 }
 ```
 
-### POST /chat/{pedidoId}/mensagens
+### Entregador
+
+#### POST `/entregador/localizacao`
+
+Request:
 
 ```json
-// Request
 {
-  "conteudo": "Cheguei no local de coleta!",
-  "tipo": "texto"
+  "latitude": -23.55,
+  "longitude": -46.63,
+  "timestamp": 1741290300000,
+  "accuracy": 8.5,
+  "speed": 10.0,
+  "bearing": 90.0
 }
-// tipo: texto | imagem (Fase 2)
 ```
 
+Response `200`:
+
 ```json
-// Response 201
+{ "success": true, "data": null, "message": "Localizacao atualizada" }
+```
+
+#### POST `/entregador/localizacao/batch`
+
+Request: array de `LocationUpdate`.
+
+Response `200`:
+
+```json
+{ "success": true, "data": null, "message": "Lote de localizacao atualizado" }
+```
+
+#### GET `/entregador/perfil`
+
+Response `200`:
+
+```json
 {
   "success": true,
   "data": {
-    "message_id": "msg_abc",
-    "status": "enviado"
+    "id": "par-123",
+    "nome": "Entregador",
+    "email": "entregador@pyloto.com",
+    "telefone": "11999999999",
+    "cpf": "12345678900",
+    "foto_url": "https://...",
+    "veiculo_tipo": "moto",
+    "veiculo_placa": "ABC1234",
+    "nota_media": 4.9,
+    "total_corridas": 120,
+    "online": true
   }
 }
 ```
 
-A mensagem e entregue ao solicitante pelo WhatsApp (canal parceiro).
+#### PUT `/entregador/perfil`
 
-### POST /chat/{pedidoId}/chamar
-
-Sem body.
+Request:
 
 ```json
-// Response 200 — Fase interim (MVP)
+{
+  "nome": "Novo Nome",
+  "telefone": "11999999999",
+  "tipo_veiculo": "MOTO",
+  "placa": "ABC1234",
+  "foto_url": "https://..."
+}
+```
+
+Response `200`: mesmo shape de `/entregador/perfil`.
+
+#### POST `/entregador/status`
+
+Request:
+
+```json
+{ "disponivel": true }
+```
+
+Response `200`:
+
+```json
+{ "success": true, "data": { "disponivel": true } }
+```
+
+#### GET `/entregador/ganhos`
+
+Query params:
+
+- `periodo`
+- `data_inicio` (opcional)
+- `data_fim` (opcional)
+
+Response `200`:
+
+```json
 {
   "success": true,
   "data": {
-    "interim": true,
-    "mensagem": "Solicitante avisado pelo WhatsApp. Aguarde o retorno."
+    "periodo": "DIARIO",
+    "totalBruto": 100.0,
+    "totalLiquido": 100.0,
+    "totalCorridas": 4,
+    "mediaValorCorrida": 25.0,
+    "corridasPorDia": {},
+    "dataInicio": null,
+    "dataFim": null
   }
 }
+```
 
-// Response 200 — Fase 2 (WebRTC)
+### Chat
+
+#### GET `/chat/{corridaId}/mensagens`
+
+Query params:
+
+- `page` (default `0`)
+- `size` (default `20`)
+
+Response `200`:
+
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": "msg-1",
+        "corrida_id": "PED-001",
+        "remetente_id": "par-123",
+        "remetente_tipo": "ENTREGADOR",
+        "conteudo": "Cheguei",
+        "tipo_mensagem": "TEXTO",
+        "timestamp": 1741290300000
+      }
+    ],
+    "total": 1,
+    "page": 0,
+    "page_size": 20,
+    "has_next": false
+  }
+}
+```
+
+#### POST `/chat/{corridaId}/mensagens`
+
+Request:
+
+```json
+{ "conteudo": "Cheguei", "tipo": "texto" }
+```
+
+Response `200`:
+
+```json
 {
   "success": true,
   "data": {
-    "interim": false,
-    "session_id": "sess_xyz",
-    "ice_servers": [{ "urls": "stun:stun.pyloto.com.br:3478" }],
-    "sdp_offer": "<sdp>"
+    "id": "msg-1",
+    "corrida_id": "PED-001",
+    "remetente_id": "par-123",
+    "remetente_tipo": "ENTREGADOR",
+    "conteudo": "Cheguei",
+    "tipo_mensagem": "TEXTO",
+    "timestamp": 1741290300000
   }
 }
 ```
 
-O APK verifica o campo `interim`:
-- `true`: exibe dialog de aviso e botao para abrir WhatsApp (chamada direta no Fase interim)
-- `false`: abre tela de chamada com cliente WebRTC
+### Notificacoes
 
----
+#### POST `/notificacoes/token`
 
-## Notificacoes
-
-| Metodo | Endpoint | Descricao |
-|---|---|---|
-| POST | `/notificacoes/token` | Registrar/atualizar token FCM |
-| GET | `/notificacoes` | Listar notificacoes do parceiro |
-
-### POST /notificacoes/token
-
-Deve ser chamado sempre que o app obter um novo token FCM (ex: apos login, apos renovacao).
+Request:
 
 ```json
-// Request
-{ "token": "<firebase_fcm_token>", "plataforma": "android" }
+{ "token": "<fcm-token>" }
 ```
 
-### Eventos FCM recebidos (nao endpoints — chegam via push)
+Response `200`:
 
-| event_type | Dados extras | Acao recomendada no app |
-|---|---|---|
-| `novo_pedido` | `pedido_id`, `tipo_servico`, `valor_parceiro`, `endereco_origem` | Som + card na HomeScreen |
-| `pedido_cancelado` | `pedido_id`, `motivo` | Alerta + retorno a HomeScreen |
-| `nova_mensagem` | `pedido_id`, `conteudo`, `de` | Notificacao + atualiza ChatScreen |
-| `chamada_solicitante` | `pedido_id`, `session_id` (Fase 2) | Tela de chamada entrante |
+```json
+{ "success": true, "data": null, "message": "Token FCM registrado" }
+```
 
----
+#### GET `/notificacoes`
 
-## Formato de Resposta Padrao
+Query params:
+
+- `page` (default `0`)
+- `size` (default `20`)
+
+Response `200`:
 
 ```json
 {
   "success": true,
-  "data": { },
-  "message": "Operacao realizada com sucesso",
-  "errors": null
+  "data": {
+    "items": [
+      {
+        "id": "notif-1",
+        "titulo": "NOVO_PEDIDO",
+        "corpo": "Pedido disponivel",
+        "tipo": "NOVO_PEDIDO",
+        "dados": { "pedido_id": "PED-001", "status": "disponivel" },
+        "timestamp": 1741290300000
+      }
+    ],
+    "total": 1,
+    "page": 0,
+    "page_size": 20,
+    "has_next": false
+  }
 }
 ```
 
-## Formato de Erro
+## Codigos de erro relevantes
 
-```json
-{
-  "success": false,
-  "data": null,
-  "message": "Descricao do erro",
-  "errors": [
-    { "field": "email", "message": "Email ja cadastrado" }
-  ]
-}
-```
-
-## Codigos HTTP relevantes
-
-| Codigo | Significado |
-|---|---|
-| 200 | OK |
-| 201 | Criado |
-| 400 | Dados invalidos |
-| 401 | Token invalido ou expirado (interceptor renova automaticamente) |
-| 403 | Sem permissao (parceiro inativo ou suspenso) |
-| 404 | Recurso nao encontrado |
-| 409 | Conflito (ex: pedido ja foi aceito por outro parceiro) |
-| 422 | Erro de validacao Pydantic |
-| 500 | Erro interno |
-
-## Paginacao
-
-```json
-{
-  "items": [ ],
-  "page": 0,
-  "size": 20,
-  "total": 150,
-  "has_next": true
-}
-```
+- `401`: JWT ausente/invalido/expirado
+- `404`: recurso nao encontrado
+- `409`: conflito de negocio (ex: cadastro duplicado)
+- `422`: erro de validacao de payload
+- `500`: erro interno

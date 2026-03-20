@@ -21,7 +21,8 @@ cd pyloto-entregador-android
 
 Copie o arquivo `gradle.properties` e configure:
 ```properties
-API_BASE_URL_STAGING="https://staging-api.pyloto.com.br/v1/"
+# STAGING desativado temporariamente (planejado para retorno em 2-3 meses)
+# API_BASE_URL_STAGING="https://staging-api.pyloto.com.br/v1/"
 API_BASE_URL_PRODUCTION="https://api.pyloto.com.br/v1/"
 ```
 
