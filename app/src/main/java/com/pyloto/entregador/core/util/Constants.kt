@@ -32,6 +32,9 @@ object Constants {
     const val PREF_ONBOARDING_COMPLETE = "onboarding_complete"
     const val PREF_DAILY_GOAL = "daily_goal"
     const val PREF_WEEKLY_GOAL = "weekly_goal"
+    const val PREF_ACTIVE_ROUTE_PEDIDO_ID = "active_route_pedido_id"
+    const val PREF_ACTIVE_ROUTE_PHASE = "active_route_phase"
+    const val PREF_ACTIVE_ROUTE_STARTED_AT = "active_route_started_at"
 
     // Default values
     const val DEFAULT_DAILY_GOAL = 300.0

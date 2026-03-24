@@ -14,9 +14,10 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
 import com.pyloto.entregador.core.util.TokenManager
+import com.pyloto.entregador.domain.usecase.entregador.ObterOnboardingStatusUseCase
 import com.pyloto.entregador.presentation.navigation.PylotoNavGraph
 import com.pyloto.entregador.presentation.navigation.Routes
-import com.pyloto.entregador.presentation.theme.PylotoTheme
+import com.pyloto.entregador.presentation.theme.PylotoTheme as PylotoAppTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -27,6 +28,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var tokenManager: TokenManager
 
+    @Inject
+    lateinit var obterOnboardingStatusUseCase: ObterOnboardingStatusUseCase
+
     private var isReady by mutableStateOf(false)
     private var startDestination by mutableStateOf(Routes.LOGIN)
 
@@ -34,16 +38,15 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
 
-        // Mantém splash até verificar estado de auth
         splashScreen.setKeepOnScreenCondition { !isReady }
 
         lifecycleScope.launch {
-            startDestination = if (tokenManager.isLoggedIn()) Routes.HOME else Routes.LOGIN
+            startDestination = resolveStartDestination()
             isReady = true
         }
 
         setContent {
-            PylotoTheme {
+            PylotoAppTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -56,6 +59,23 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
+            }
+        }
+    }
+
+    private suspend fun resolveStartDestination(): String {
+        if (!tokenManager.isLoggedIn()) {
+            return Routes.LOGIN
+        }
+
+        val cachedOnboardingComplete = tokenManager.getOnboardingComplete()
+        return runCatching {
+            val status = obterOnboardingStatusUseCase()
+            if (status.prontoParaOperacao) Routes.HOME else Routes.CONTRACT_SIGNATURE
+        }.getOrElse {
+            when (cachedOnboardingComplete) {
+                false -> Routes.CONTRACT_SIGNATURE
+                else -> Routes.HOME
             }
         }
     }

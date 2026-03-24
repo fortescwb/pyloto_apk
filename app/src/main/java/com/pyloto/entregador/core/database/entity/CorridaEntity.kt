@@ -14,7 +14,6 @@ import androidx.room.PrimaryKey
 data class CorridaEntity(
     @PrimaryKey val id: String,
     val clienteNome: String,
-    val clienteTelefone: String,
     val clienteFoto: String?,
     val enderecoOrigem: String,
     val enderecoDestino: String,

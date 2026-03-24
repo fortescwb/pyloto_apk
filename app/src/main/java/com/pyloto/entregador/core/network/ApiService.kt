@@ -5,15 +5,25 @@ import com.pyloto.entregador.core.network.model.PaginatedResponse
 import com.pyloto.entregador.data.auth.remote.dto.AuthToken
 import com.pyloto.entregador.data.auth.remote.dto.LoginRequest
 import com.pyloto.entregador.data.auth.remote.dto.RefreshTokenRequest
-import com.pyloto.entregador.data.auth.remote.dto.RegisterRequest
 import com.pyloto.entregador.data.chat.remote.dto.EnviarMensagemRequest
 import com.pyloto.entregador.data.chat.remote.dto.MensagemResponse
 import com.pyloto.entregador.data.corrida.remote.dto.CancelamentoRequest
 import com.pyloto.entregador.data.corrida.remote.dto.CorridaDetalhesResponse
 import com.pyloto.entregador.data.corrida.remote.dto.CorridaResponse
 import com.pyloto.entregador.data.corrida.remote.dto.FinalizacaoRequest
+import com.pyloto.entregador.data.corrida.remote.dto.OperationalEventRequest
+import com.pyloto.entregador.data.corrida.remote.dto.RecusaCorridaRequest
+import com.pyloto.entregador.data.corrida.remote.dto.RecusaCorridaResponse
 import com.pyloto.entregador.data.entregador.remote.dto.AtualizarPerfilRequest
+import com.pyloto.entregador.data.entregador.remote.dto.AgendaTrabalhoResponse
+import com.pyloto.entregador.data.entregador.remote.dto.CancelarAgendaRequest
+import com.pyloto.entregador.data.entregador.remote.dto.CapacityCheckResponse
+import com.pyloto.entregador.data.entregador.remote.dto.CapacitySnapshotResponse
+import com.pyloto.entregador.data.entregador.remote.dto.CriarAgendaRequest
 import com.pyloto.entregador.data.entregador.remote.dto.EntregadorPerfilResponse
+import com.pyloto.entregador.data.entregador.remote.dto.OnboardingStatusResponse
+import com.pyloto.entregador.data.entregador.remote.dto.SubmitDigitalContractSignatureRequest
+import com.pyloto.entregador.data.entregador.remote.dto.SubmitVehicleAuditRequest
 import com.pyloto.entregador.data.entregador.remote.dto.StatusRequest
 import com.pyloto.entregador.data.ganhos.remote.dto.GanhosResponse
 import com.pyloto.entregador.data.location.remote.dto.LocationUpdate
@@ -36,9 +46,6 @@ interface ApiService {
     @POST("auth/login")
     suspend fun login(@Body request: LoginRequest): ApiResponse<AuthToken>
 
-    @POST("auth/register")
-    suspend fun register(@Body request: RegisterRequest): ApiResponse<AuthToken>
-
     @POST("auth/refresh")
     suspend fun refreshToken(@Body request: RefreshTokenRequest): ApiResponse<AuthToken>
 
@@ -55,8 +62,19 @@ interface ApiService {
     @GET("corridas/{id}")
     suspend fun getCorridaDetalhes(@Path("id") corridaId: String): ApiResponse<CorridaDetalhesResponse>
 
+    @GET("corridas/{id}/capacidade-check")
+    suspend fun getCorridaCapacityCheck(
+        @Path("id") corridaId: String
+    ): ApiResponse<CapacityCheckResponse>
+
     @POST("corridas/{id}/aceitar")
     suspend fun aceitarCorrida(@Path("id") corridaId: String): ApiResponse<CorridaDetalhesResponse>
+
+    @POST("corridas/{id}/recusar")
+    suspend fun recusarCorrida(
+        @Path("id") corridaId: String,
+        @Body request: RecusaCorridaRequest
+    ): ApiResponse<RecusaCorridaResponse>
 
     @POST("corridas/{id}/iniciar")
     suspend fun iniciarCorrida(@Path("id") corridaId: String): ApiResponse<Unit>
@@ -76,6 +94,12 @@ interface ApiService {
         @Body request: CancelamentoRequest
     ): ApiResponse<Unit>
 
+    @POST("corridas/{id}/eventos")
+    suspend fun registrarEventoOperacional(
+        @Path("id") corridaId: String,
+        @Body request: OperationalEventRequest
+    ): ApiResponse<CorridaDetalhesResponse>
+
     @GET("corridas/historico")
     suspend fun getHistoricoCorridas(
         @Query("page") page: Int,
@@ -91,11 +115,41 @@ interface ApiService {
     @GET("entregador/perfil")
     suspend fun getPerfil(): ApiResponse<EntregadorPerfilResponse>
 
+    @GET("entregador/onboarding-status")
+    suspend fun getOnboardingStatus(): ApiResponse<OnboardingStatusResponse>
+
+    @GET("entregador/capacidade")
+    suspend fun getOperationalCapacity(): ApiResponse<CapacitySnapshotResponse>
+
+    @GET("entregador/agenda")
+    suspend fun getWorkSchedule(): ApiResponse<AgendaTrabalhoResponse>
+
+    @POST("entregador/agenda")
+    suspend fun createWorkSchedule(
+        @Body request: CriarAgendaRequest
+    ): ApiResponse<AgendaTrabalhoResponse>
+
+    @POST("entregador/agenda/{agendaId}/cancelar")
+    suspend fun cancelWorkSchedule(
+        @Path("agendaId") agendaId: String,
+        @Body request: CancelarAgendaRequest
+    ): ApiResponse<AgendaTrabalhoResponse>
+
     @PUT("entregador/perfil")
     suspend fun atualizarPerfil(@Body perfil: AtualizarPerfilRequest): ApiResponse<EntregadorPerfilResponse>
 
     @POST("entregador/status")
     suspend fun atualizarStatus(@Body status: StatusRequest): ApiResponse<Unit>
+
+    @POST("entregador/contrato/assinatura-digital")
+    suspend fun submitDigitalContractSignature(
+        @Body request: SubmitDigitalContractSignatureRequest
+    ): ApiResponse<OnboardingStatusResponse>
+
+    @POST("entregador/auditoria-veiculo")
+    suspend fun submitVehicleAuditEvidence(
+        @Body request: SubmitVehicleAuditRequest
+    ): ApiResponse<OnboardingStatusResponse>
 
     @GET("entregador/ganhos")
     suspend fun getGanhos(

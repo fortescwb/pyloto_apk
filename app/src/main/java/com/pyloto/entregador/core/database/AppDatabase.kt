@@ -16,7 +16,7 @@ import com.pyloto.entregador.core.database.entity.*
         NotificacaoEntity::class,
         SyncQueueEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
