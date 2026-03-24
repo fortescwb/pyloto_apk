@@ -4,19 +4,11 @@ data class AuthToken(
     val accessToken: String,
     val refreshToken: String,
     val userId: String,
-    val expiresIn: Long
+    val expiresIn: Long,
+    val requiresDigitalContractSignature: Boolean = false
 )
 
 data class LoginCredentials(
     val email: String,
     val senha: String
-)
-
-data class RegisterData(
-    val nome: String,
-    val email: String,
-    val senha: String,
-    val telefone: String,
-    val cpf: String,
-    val veiculoTipo: VeiculoTipo
 )

@@ -16,8 +16,22 @@ data class Corrida(
     val motivoCancelamento: String? = null,
     /** Indica se a corrida é prioritária (ex.: pedido urgente) */
     val prioridade: Boolean = false,
+    /** Modalidade formal vinda do backend */
+    val modalidade: String = "comum",
     /** Quantidade de itens no pedido */
-    val itens: Int = 1
+    val itens: Int = 1,
+    /** Pedido comum criado após 18h passa para a janela do dia seguinte */
+    val processamentoDiaSeguinte: Boolean = false,
+    /** Deadline operacional de coleta, quando já houver aceite */
+    val coletaDeadlineEm: Long? = null,
+    /** Deadline operacional de entrega */
+    val entregaDeadlineEm: Long? = null,
+    /** Situação de SLA calculada pelo backend */
+    val slaStatus: String = "ok",
+    /** Resumo legível da regra vigente para a corrida */
+    val slaResumo: String? = null,
+    /** Alertas e avisos operacionais do SLA */
+    val slaAlertas: List<String> = emptyList()
 )
 
 data class Cliente(
