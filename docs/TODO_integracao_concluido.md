@@ -1,5 +1,10 @@
 # TODO de Integracao do pyloto_app-parceiro
 
+> Nota historica: este documento registra etapas antigas de integracao.
+> Desde 24/03/2026, `POST /auth/register` nao faz mais parte do fluxo vigente do app parceiro.
+> O cadastro passou a ser exclusivamente administrativo via `pyloto_admin-panel`.
+> Para contrato atual do produto, consultar `docs/API.md`, `docs/ARQUITETURA-COMUNICACAO.md` e `TODO_regras-minimas.md`.
+
 ## Objetivo
 
 Este documento consolida o trabalho necessario para que o `pyloto_app-parceiro` passe a consumir dados reais do ecossistema Pyloto com seguranca, previsibilidade e manutencao adequada.

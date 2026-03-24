@@ -227,20 +227,20 @@ Nao ha WebSocket — o rastreamento e por polling a cada 5 segundos na pagina pu
 
 ## 8. Cadastro de Parceiro
 
-O cadastro ocorre dentro do proprio app (tela de registro).
-O parceiro informa tipo de servico e documentos (foto, CNH se entregador, documento).
+O cadastro do parceiro **nao** ocorre no app.
+O credenciamento e realizado presencialmente por um colaborador da Pyloto, via `pyloto_admin-panel`, com captura dos documentos minimos, dados do veiculo, plano e geracao automatica do contrato padrao.
 
-Para parceiros do tipo `entregador`:
-- Campo `tipo_veiculo` obrigatorio (moto | carro | bicicleta | van)
-- Campo `placa` obrigatorio
+Fluxo operacional vigente:
 
-Para os demais tipos:
-- `tipo_veiculo` e `placa` nao se aplicam
+1. A equipe Pyloto realiza o cadastro administrativo com os anexos/documentos obrigatorios.
+2. O contrato de adesao e termos de uso e preenchido automaticamente e fica disponivel para download.
+3. O parceiro assina a via fisica no escritorio e a equipe arquiva essa evidencia no cadastro.
+4. No primeiro login, o app consulta `GET /entregador/onboarding-status`.
+5. Se `requires_digital_contract_signature = true`, o app abre a etapa obrigatoria de onboarding contratual.
+6. O parceiro baixa a via digital, assina no Gov.br e envia a referencia em `POST /entregador/contrato/assinatura-digital`.
+7. Somente apos a assinatura digital o cadastro fica operacionalmente habilitado para Home, corridas e agenda.
 
-O cadastro passa por aprovacao manual da Pyloto antes de o parceiro poder receber pedidos.
-Status inicial: `pendente`. Apos aprovacao: `ativo`.
-
-Enquanto `pendente`, o parceiro ve tela informativa no app ("Cadastro em analise").
+Enquanto houver pendencia contratual, documental ou incidente bloqueante, o parceiro nao recebe liberacao operacional no app.
 
 ---
 

@@ -64,6 +64,7 @@ Response `200`:
     "access_token": "<jwt>",
     "refresh_token": "<jwt>",
     "token_type": "bearer",
+    "requires_digital_contract_signature": true,
     "parceiro": {
       "id": "par-123",
       "nome": "Entregador",
@@ -75,21 +76,68 @@ Response `200`:
 
 #### POST `/auth/register`
 
+Status atual:
+
+- Fluxo removido do app.
+- O cadastro do parceiro e realizado exclusivamente pelo `pyloto_admin-panel`.
+- O backend responde `403 FORBIDDEN`.
+
+Response `403`:
+
+```json
+{
+  "ok": false,
+  "code": "FORBIDDEN",
+  "message": "Cadastro de parceiros e realizado exclusivamente pela equipe Pyloto.",
+  "retryable": false
+}
+```
+
+### Onboarding contratual
+
+#### GET `/entregador/onboarding-status`
+
+Response `200`:
+
+```json
+{
+  "success": true,
+  "data": {
+    "requires_digital_contract_signature": true,
+    "contrato_download_ref": "gs://docs/contratos/joao-2026-03.pdf",
+    "contrato_assinatura_digital_ref": "",
+    "pronto_para_operacao": false,
+    "document_alerts": [],
+    "document_blockers": [],
+    "vehicle_audit_required": false
+  }
+}
+```
+
+#### POST `/entregador/contrato/assinatura-digital`
+
 Request:
 
 ```json
 {
-  "nome": "Entregador Teste",
-  "email": "entregador@pyloto.com",
-  "senha": "Senha@123",
-  "telefone": "11999999999",
-  "cpf": "12345678900",
-  "tipo_veiculo": "MOTO",
-  "placa": "ABC1234"
+  "assinatura_digital_ref": "https://www.gov.br/assinador/contrato-joao.pdf"
 }
 ```
 
-Response `200`: mesmo shape de `/auth/login`.
+Response `200`:
+
+```json
+{
+  "success": true,
+  "message": "Assinatura digital registrada",
+  "data": {
+    "requires_digital_contract_signature": false,
+    "contrato_assinatura_digital_concluida": true,
+    "contrato_assinatura_digital_ref": "https://www.gov.br/assinador/contrato-joao.pdf",
+    "pronto_para_operacao": true
+  }
+}
+```
 
 #### POST `/auth/refresh`
 
@@ -143,9 +191,24 @@ Response `200`:
       "id": "PED-001",
       "status": "disponivel",
       "valor_parceiro": 22.5,
+      "cliente_nome": "Maria S.",
+      "cliente_telefone": "(**) *****-8888",
       "endereco_origem": { "rua": "Rua A", "lat": -23.55, "lng": -46.63 },
       "endereco_destino": { "rua": "Rua B", "lat": -23.56, "lng": -46.64 },
-      "dados": { "nome": "Cliente" },
+      "dados": {
+        "precificacao": {
+          "valor_pedido": 22.5,
+          "valor_pedido_com_taxa": 24.75,
+          "duracao_estimada_min": 20,
+          "volume_estimado_l": 6,
+          "peso_estimado_kg": 2,
+          "valor_item_estimado": 120
+        },
+        "privacidade": {
+          "dados_solicitante_minimizados": true,
+          "canal_oficial_contato": "Use apenas os canais oficiais da Pyloto para tratar a corrida."
+        }
+      },
       "created_at": 1741290000
     }
   ],
@@ -163,11 +226,25 @@ Response `200`:
   "data": {
     "id": "PED-001",
     "status": "aceito",
-    "wa_id": "5511999999999",
     "valor_parceiro": 22.5,
+    "cliente_nome": "Maria S.",
+    "cliente_telefone": "(**) *****-8888",
     "endereco_origem": {},
     "endereco_destino": {},
-    "dados": {},
+    "dados": {
+      "precificacao": {
+        "valor_pedido": 22.5,
+        "valor_pedido_com_taxa": 24.75,
+        "duracao_estimada_min": 20,
+        "volume_estimado_l": 6,
+        "peso_estimado_kg": 2,
+        "valor_item_estimado": 120
+      },
+      "privacidade": {
+        "dados_solicitante_minimizados": true,
+        "diretriz_armazenamento": "Nao persistir telefone bruto do solicitante fora dos canais oficiais da Pyloto."
+      }
+    },
     "created_at": 1741290000,
     "aceito_at": 1741290100
   }
@@ -310,13 +387,49 @@ Request:
 {
   "nome": "Novo Nome",
   "telefone": "11999999999",
-  "tipo_veiculo": "MOTO",
-  "placa": "ABC1234",
   "foto_url": "https://..."
 }
 ```
 
+Observacao: alteracao direta de `tipo_veiculo` e `placa` e bloqueada no app; qualquer mudanca estrutural de veiculo depende de validacao da equipe Pyloto.
+
 Response `200`: mesmo shape de `/entregador/perfil`.
+
+#### GET `/entregador/capacidade`
+
+Response `200`:
+
+```json
+{
+  "success": true,
+  "data": {
+    "policy_version": "2026.03-contract-annex",
+    "bau_capacidade_litros": 120,
+    "limits": {
+      "volume_l": 120,
+      "peso_kg": 30,
+      "valor_reais": 2000
+    },
+    "reserved": {
+      "pedidos": 1,
+      "volume_l": 30,
+      "peso_kg": 7,
+      "valor_reais": 350
+    },
+    "in_use": {
+      "pedidos": 1,
+      "volume_l": 35,
+      "peso_kg": 8,
+      "valor_reais": 450
+    },
+    "remaining": {
+      "volume_l": 55,
+      "peso_kg": 15,
+      "valor_reais": 1200
+    }
+  }
+}
+```
 
 #### POST `/entregador/status`
 
@@ -325,6 +438,12 @@ Request:
 ```json
 { "disponivel": true }
 ```
+
+Observacao:
+
+- este campo controla apenas o toggle manual de recebimento de ofertas.
+- o despacho real ainda depende de elegibilidade operacional/financeira.
+- agenda, capacidade do bau e SLA continuam sendo validados por corrida.
 
 Response `200`:
 

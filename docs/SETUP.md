@@ -64,7 +64,7 @@ app/src/main/java/com/pyloto/entregador/
 │   ├── usecase/    # Use cases
 │   └── repository/ # Interfaces de repositórios
 └── presentation/   # UI (Compose)
-    ├── auth/       # Login, registro
+    ├── auth/       # Login e onboarding contratual
     ├── home/       # Tela principal
     ├── corrida/    # Corrida disponível, ativa, histórico
     ├── perfil/     # Perfil do entregador
