@@ -9,7 +9,12 @@ import com.pyloto.entregador.data.common.withNetworkGuard
 import com.pyloto.entregador.data.corrida.mapper.CorridaMapper
 import com.pyloto.entregador.data.corrida.remote.dto.CancelamentoRequest
 import com.pyloto.entregador.data.corrida.remote.dto.FinalizacaoRequest
+import com.pyloto.entregador.data.corrida.remote.dto.OperationalEventRequest
+import com.pyloto.entregador.data.corrida.remote.dto.RecusaCorridaRequest
+import com.pyloto.entregador.data.entregador.remote.dto.toDomain
+import com.pyloto.entregador.domain.model.CapacityCheck
 import com.pyloto.entregador.domain.model.Corrida
+import com.pyloto.entregador.domain.model.CorridaOperationalEvent
 import com.pyloto.entregador.domain.repository.CorridaRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -62,6 +67,11 @@ class CorridaRepositoryImpl @Inject constructor(
         )
     }
 
+    override suspend fun getCapacityCheck(corridaId: String): CapacityCheck {
+        val response = apiService.getCorridaCapacityCheck(corridaId)
+        return response.data.toDomain()
+    }
+
     override suspend fun aceitarCorrida(corridaId: String): Corrida {
         val response = apiService.aceitarCorrida(corridaId)
         val corrida = mapper.toDomain(response.data)
@@ -69,24 +79,61 @@ class CorridaRepositoryImpl @Inject constructor(
         return corrida
     }
 
+    override suspend fun recusarCorrida(corridaId: String, categoria: String, motivo: String) {
+        apiService.recusarCorrida(
+            corridaId,
+            RecusaCorridaRequest(
+                categoria = categoria,
+                motivo = motivo
+            )
+        )
+        corridaDao.atualizarStatus(corridaId, "CANCELADA")
+    }
+
     override suspend fun iniciarCorrida(corridaId: String) {
         apiService.iniciarCorrida(corridaId)
-        corridaDao.atualizarStatus(corridaId, "A_CAMINHO_COLETA")
+        val corrida = mapper.toDomain(apiService.getCorridaDetalhes(corridaId).data)
+        corridaDao.insert(mapper.toEntity(corrida))
     }
 
     override suspend fun coletarCorrida(corridaId: String) {
         apiService.coletarCorrida(corridaId)
-        corridaDao.atualizarStatus(corridaId, "A_CAMINHO_ENTREGA")
+        val corrida = mapper.toDomain(apiService.getCorridaDetalhes(corridaId).data)
+        corridaDao.insert(mapper.toEntity(corrida))
     }
 
     override suspend fun finalizarCorrida(corridaId: String, fotoComprovante: String?) {
         apiService.finalizarCorrida(corridaId, FinalizacaoRequest(fotoComprovanteUrl = fotoComprovante))
-        corridaDao.atualizarStatus(corridaId, "FINALIZADA")
+        val corrida = mapper.toDomain(apiService.getCorridaDetalhes(corridaId).data)
+        corridaDao.insert(mapper.toEntity(corrida))
     }
 
     override suspend fun cancelarCorrida(corridaId: String, motivo: String) {
         apiService.cancelarCorrida(corridaId, CancelamentoRequest(motivo))
         corridaDao.atualizarStatus(corridaId, "CANCELADA")
+    }
+
+    override suspend fun registrarEventoOperacional(
+        corridaId: String,
+        event: CorridaOperationalEvent
+    ): Corrida {
+        val response = apiService.registrarEventoOperacional(
+            corridaId,
+            OperationalEventRequest(
+                kind = event.kind,
+                message = event.message,
+                latitude = event.latitude,
+                longitude = event.longitude,
+                accuracy = event.accuracy,
+                speed = event.speed,
+                bearing = event.bearing,
+                source = event.source,
+                metadata = event.metadata.takeIf { it.isNotEmpty() }
+            )
+        )
+        val corrida = mapper.toDomain(response.data)
+        corridaDao.insert(mapper.toEntity(corrida))
+        return corrida
     }
 
     override fun observarCorridaAtiva(): Flow<Corrida?> {

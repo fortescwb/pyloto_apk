@@ -9,6 +9,7 @@ import com.pyloto.entregador.data.common.withCacheFallback
 import com.pyloto.entregador.data.common.withNetworkGuard
 import com.pyloto.entregador.data.location.remote.dto.LocationUpdate
 import com.pyloto.entregador.domain.repository.LocationRepository
+import com.pyloto.entregador.domain.repository.PreferencesRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -18,10 +19,12 @@ import javax.inject.Singleton
 class LocationRepositoryImpl @Inject constructor(
     private val apiService: ApiService,
     private val locationDao: LocationDao,
-    private val connectivityMonitor: ConnectivityMonitor
+    private val connectivityMonitor: ConnectivityMonitor,
+    private val preferencesRepository: PreferencesRepository
 ) : LocationRepository {
 
     override suspend fun saveLocation(location: Location) {
+        val activeRoute = preferencesRepository.getActiveRouteContext()
         val entity = LocationEntity(
             latitude = location.latitude,
             longitude = location.longitude,
@@ -30,13 +33,15 @@ class LocationRepositoryImpl @Inject constructor(
             bearing = location.bearing,
             altitude = location.altitude,
             timestamp = location.time,
-            corridaId = null,
+            corridaId = activeRoute?.pedidoId,
             sincronizado = false
         )
         locationDao.insert(entity)
     }
 
     override suspend fun syncLocationToServer(location: Location) {
+        val activeRoute = preferencesRepository.getActiveRouteContext()
+        val source = if (activeRoute != null) "route_tracking" else "passive_presence"
         withNetworkGuard(
             operation = "localizacao_sync_unitaria",
             isConnected = connectivityMonitor.isCurrentlyConnected(),
@@ -47,7 +52,9 @@ class LocationRepositoryImpl @Inject constructor(
                     accuracy = location.accuracy,
                     speed = location.speed,
                     bearing = location.bearing,
-                    timestamp = location.time
+                    timestamp = location.time,
+                    source = source,
+                    pedidoId = activeRoute?.pedidoId
                 )
                 apiService.atualizarLocalizacao(update)
             },
@@ -58,6 +65,8 @@ class LocationRepositoryImpl @Inject constructor(
     override suspend fun syncPendingLocations() {
         val pendentes = locationDao.getNaoSincronizadas(100)
         if (pendentes.isEmpty()) return
+        val activeRoute = preferencesRepository.getActiveRouteContext()
+        val source = if (activeRoute != null) "route_tracking_batch" else "passive_presence_batch"
 
         withNetworkGuard(
             operation = "localizacao_sync_lote",
@@ -70,7 +79,9 @@ class LocationRepositoryImpl @Inject constructor(
                         accuracy = entity.accuracy,
                         speed = entity.speed,
                         bearing = entity.bearing,
-                        timestamp = entity.timestamp
+                        timestamp = entity.timestamp,
+                        source = source,
+                        pedidoId = entity.corridaId ?: activeRoute?.pedidoId
                     )
                 }
                 withCacheFallback(

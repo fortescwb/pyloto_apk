@@ -21,6 +21,13 @@ data class CorridaResponse(
     @SerializedName(value = "cancelado_at", alternate = ["canceladaEm"]) val canceladaEm: Double? = null,
     @SerializedName(value = "foto_comprovante_url", alternate = ["fotoComprovanteUrl"]) val fotoComprovanteUrl: String? = null,
     @SerializedName(value = "motivo", alternate = ["motivoCancelamento", "motivo_cancelamento"]) val motivoCancelamento: String? = null,
+    @SerializedName("modalidade_corrida") val modalidadeCorrida: String? = null,
+    @SerializedName("processamento_dia_seguinte") val processamentoDiaSeguinte: Boolean? = null,
+    @SerializedName("coleta_deadline_at") val coletaDeadlineAt: Double? = null,
+    @SerializedName("entrega_deadline_at") val entregaDeadlineAt: Double? = null,
+    @SerializedName("sla_status") val slaStatus: String? = null,
+    @SerializedName("sla_rule_summary") val slaResumo: String? = null,
+    @SerializedName("sla_alerts") val slaAlerts: List<String>? = null,
     @SerializedName("dados") val dados: Map<String, Any?>? = null
 )
 
@@ -43,6 +50,13 @@ data class CorridaDetalhesResponse(
     @SerializedName(value = "cancelado_at", alternate = ["canceladaEm"]) val canceladaEm: Double? = null,
     @SerializedName(value = "foto_comprovante_url", alternate = ["fotoComprovanteUrl"]) val fotoComprovanteUrl: String? = null,
     @SerializedName(value = "motivo", alternate = ["motivoCancelamento", "motivo_cancelamento"]) val motivoCancelamento: String? = null,
+    @SerializedName("modalidade_corrida") val modalidadeCorrida: String? = null,
+    @SerializedName("processamento_dia_seguinte") val processamentoDiaSeguinte: Boolean? = null,
+    @SerializedName("coleta_deadline_at") val coletaDeadlineAt: Double? = null,
+    @SerializedName("entrega_deadline_at") val entregaDeadlineAt: Double? = null,
+    @SerializedName("sla_status") val slaStatus: String? = null,
+    @SerializedName("sla_rule_summary") val slaResumo: String? = null,
+    @SerializedName("sla_alerts") val slaAlerts: List<String>? = null,
     @SerializedName("dados") val dados: Map<String, Any?>? = null
 )
 
@@ -63,4 +77,33 @@ data class FinalizacaoRequest(
 
 data class CancelamentoRequest(
     @SerializedName("motivo") val motivo: String
+)
+
+data class RecusaCorridaRequest(
+    @SerializedName("categoria") val categoria: String,
+    @SerializedName("motivo") val motivo: String
+)
+
+data class RecusaCorridaReputationResponse(
+    @SerializedName("nivel_distribuicao") val nivelDistribuicao: String? = null,
+    @SerializedName("recusas_injustificadas_janela") val recusasInjustificadasJanela: Int? = null
+)
+
+data class RecusaCorridaResponse(
+    @SerializedName("pedido_id") val pedidoId: String,
+    @SerializedName("categoria") val categoria: String,
+    @SerializedName("justificavel") val justificavel: Boolean,
+    @SerializedName("reputacao") val reputacao: RecusaCorridaReputationResponse? = null
+)
+
+data class OperationalEventRequest(
+    @SerializedName("kind") val kind: String,
+    @SerializedName("message") val message: String? = null,
+    @SerializedName("latitude") val latitude: Double? = null,
+    @SerializedName("longitude") val longitude: Double? = null,
+    @SerializedName("accuracy") val accuracy: Float? = null,
+    @SerializedName("speed") val speed: Float? = null,
+    @SerializedName("bearing") val bearing: Float? = null,
+    @SerializedName("source") val source: String? = null,
+    @SerializedName("metadata") val metadata: Map<String, String>? = null
 )

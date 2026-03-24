@@ -4,10 +4,8 @@ import com.pyloto.entregador.core.network.ApiService
 import com.pyloto.entregador.core.util.TokenManager
 import com.pyloto.entregador.data.auth.remote.dto.LoginRequest
 import com.pyloto.entregador.data.auth.remote.dto.RefreshTokenRequest
-import com.pyloto.entregador.data.auth.remote.dto.RegisterRequest
 import com.pyloto.entregador.domain.model.AuthToken
 import com.pyloto.entregador.domain.model.LoginCredentials
-import com.pyloto.entregador.domain.model.RegisterData
 import com.pyloto.entregador.domain.repository.AuthRepository
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -17,6 +15,12 @@ class AuthRepositoryImpl @Inject constructor(
     private val apiService: ApiService,
     private val tokenManager: TokenManager
 ) : AuthRepository {
+
+    private suspend fun persistAuthState(token: AuthToken) {
+        tokenManager.saveTokens(token.accessToken, token.refreshToken)
+        tokenManager.saveUserId(token.userId)
+        tokenManager.saveOnboardingComplete(!token.requiresDigitalContractSignature)
+    }
 
     override suspend fun login(credentials: LoginCredentials): AuthToken {
         val response = apiService.login(
@@ -29,35 +33,10 @@ class AuthRepositoryImpl @Inject constructor(
             accessToken = response.data.accessToken,
             refreshToken = refreshToken,
             userId = response.data.parceiro?.id ?: "",
-            expiresIn = 3600L
+            expiresIn = 3600L,
+            requiresDigitalContractSignature = response.data.requiresDigitalContractSignature
         )
-        tokenManager.saveTokens(token.accessToken, token.refreshToken)
-        tokenManager.saveUserId(token.userId)
-        return token
-    }
-
-    override suspend fun register(data: RegisterData): AuthToken {
-        val response = apiService.register(
-            RegisterRequest(
-                nome = data.nome,
-                email = data.email,
-                senha = data.senha,
-                telefone = data.telefone,
-                cpf = data.cpf,
-                veiculoTipo = data.veiculoTipo.name
-            )
-        )
-        val refreshToken = response.data.refreshToken?.ifBlank { response.data.accessToken }
-            ?: response.data.accessToken
-
-        val token = AuthToken(
-            accessToken = response.data.accessToken,
-            refreshToken = refreshToken,
-            userId = response.data.parceiro?.id ?: "",
-            expiresIn = 3600L
-        )
-        tokenManager.saveTokens(token.accessToken, token.refreshToken)
-        tokenManager.saveUserId(token.userId)
+        persistAuthState(token)
         return token
     }
 
@@ -81,9 +60,11 @@ class AuthRepositoryImpl @Inject constructor(
             accessToken = newAccessToken,
             refreshToken = newRefreshToken,
             userId = userId,
-            expiresIn = 3600L
+            expiresIn = 3600L,
+            requiresDigitalContractSignature = !(tokenManager.getOnboardingComplete() ?: true)
         )
         tokenManager.saveTokens(token.accessToken, token.refreshToken)
+        tokenManager.saveUserId(token.userId)
         return token
     }
 

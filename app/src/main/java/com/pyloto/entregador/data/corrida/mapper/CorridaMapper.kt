@@ -37,6 +37,13 @@ class CorridaMapper @Inject constructor() {
             canceladaEm = response.canceladaEm,
             fotoComprovanteUrl = response.fotoComprovanteUrl,
             motivoCancelamento = response.motivoCancelamento,
+            modalidadeCorrida = response.modalidadeCorrida,
+            processamentoDiaSeguinte = response.processamentoDiaSeguinte,
+            coletaDeadlineAt = response.coletaDeadlineAt,
+            entregaDeadlineAt = response.entregaDeadlineAt,
+            slaStatus = response.slaStatus,
+            slaResumo = response.slaResumo,
+            slaAlerts = response.slaAlerts,
             dados = response.dados
         )
     }
@@ -61,6 +68,13 @@ class CorridaMapper @Inject constructor() {
             canceladaEm = response.canceladaEm,
             fotoComprovanteUrl = response.fotoComprovanteUrl,
             motivoCancelamento = response.motivoCancelamento,
+            modalidadeCorrida = response.modalidadeCorrida,
+            processamentoDiaSeguinte = response.processamentoDiaSeguinte,
+            coletaDeadlineAt = response.coletaDeadlineAt,
+            entregaDeadlineAt = response.entregaDeadlineAt,
+            slaStatus = response.slaStatus,
+            slaResumo = response.slaResumo,
+            slaAlerts = response.slaAlerts,
             dados = response.dados
         )
     }
@@ -70,7 +84,7 @@ class CorridaMapper @Inject constructor() {
             id = entity.id,
             cliente = Cliente(
                 nome = entity.clienteNome,
-                telefone = entity.clienteTelefone,
+                telefone = "",
                 foto = entity.clienteFoto
             ),
             origem = Endereco(
@@ -104,7 +118,9 @@ class CorridaMapper @Inject constructor() {
                 canceladaEm = entity.canceladaEm
             ),
             fotoComprovanteUrl = entity.fotoComprovanteUrl,
-            motivoCancelamento = entity.motivoCancelamento
+            motivoCancelamento = entity.motivoCancelamento,
+            prioridade = false,
+            modalidade = "comum"
         )
     }
 
@@ -112,7 +128,6 @@ class CorridaMapper @Inject constructor() {
         return CorridaEntity(
             id = corrida.id,
             clienteNome = corrida.cliente.nome,
-            clienteTelefone = corrida.cliente.telefone,
             clienteFoto = corrida.cliente.foto,
             enderecoOrigem = corrida.origem.enderecoFormatado,
             enderecoDestino = corrida.destino.enderecoFormatado,
@@ -155,18 +170,29 @@ class CorridaMapper @Inject constructor() {
         canceladaEm: Double?,
         fotoComprovanteUrl: String?,
         motivoCancelamento: String?,
+        modalidadeCorrida: String?,
+        processamentoDiaSeguinte: Boolean?,
+        coletaDeadlineAt: Double?,
+        entregaDeadlineAt: Double?,
+        slaStatus: String?,
+        slaResumo: String?,
+        slaAlerts: List<String>?,
         dados: Map<String, Any?>?
     ): Corrida {
         val dadosOrigem = dados?.get("origem") as? Map<*, *>
         val dadosDestino = dados?.get("destino") as? Map<*, *>
+        val modalidade = (
+            modalidadeCorrida
+                ?: extractString(dados, "modalidade_corrida", "tipo_entrega")
+                ?: "comum"
+            ).trim().lowercase()
+        val prioridade = modalidade == "prioridade" || extractBoolean(dados, "prioridade_obrigatoria")
 
         val nome = clienteNome
             ?: extractString(dados, "nome", "solicitante_nome", "cliente_nome")
             ?: "Cliente"
 
-        val telefone = clienteTelefone
-            ?: extractString(dados, "telefone", "cliente_telefone")
-            ?: ""
+        val telefone = clienteTelefone ?: ""
 
         val origem = toEndereco(enderecoOrigem, dadosOrigem)
         val destino = toEndereco(enderecoDestino, dadosDestino)
@@ -193,7 +219,15 @@ class CorridaMapper @Inject constructor() {
                 canceladaEm = canceladaEm?.let(::toEpochMillis)
             ),
             fotoComprovanteUrl = fotoComprovanteUrl,
-            motivoCancelamento = motivoCancelamento
+            motivoCancelamento = motivoCancelamento,
+            prioridade = prioridade,
+            modalidade = modalidade,
+            processamentoDiaSeguinte = processamentoDiaSeguinte == true,
+            coletaDeadlineEm = coletaDeadlineAt?.let(::toEpochMillis),
+            entregaDeadlineEm = entregaDeadlineAt?.let(::toEpochMillis),
+            slaStatus = slaStatus?.trim()?.lowercase().orEmpty().ifBlank { "ok" },
+            slaResumo = slaResumo,
+            slaAlertas = slaAlerts.orEmpty().map(String::trim).filter(String::isNotEmpty)
         )
     }
 
@@ -254,6 +288,17 @@ class CorridaMapper @Inject constructor() {
             if (!value.isNullOrEmpty()) return value
         }
         return null
+    }
+
+    private fun extractBoolean(map: Map<String, Any?>?, vararg keys: String): Boolean {
+        if (map == null) return false
+        for (key in keys) {
+            val raw = map[key]?.toString()?.trim()?.lowercase() ?: continue
+            if (raw in setOf("1", "true", "sim", "yes")) {
+                return true
+            }
+        }
+        return false
     }
 
     private fun mapStatus(rawStatus: String): CorridaStatus {
