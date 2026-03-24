@@ -1,5 +1,6 @@
 package com.pyloto.entregador.presentation.corrida.disponivel
 
+import com.pyloto.entregador.domain.model.CapacityCheck
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pyloto.entregador.domain.model.Corrida
@@ -15,9 +16,12 @@ import javax.inject.Inject
 data class CorridaDetalhesUiState(
     val isLoading: Boolean = true,
     val isAceitando: Boolean = false,
+    val isRecusando: Boolean = false,
     val corrida: Corrida? = null,
+    val capacityCheck: CapacityCheck? = null,
     val erro: String? = null,
-    val aceitaComSucesso: Boolean = false
+    val aceitaComSucesso: Boolean = false,
+    val recusaComSucesso: Boolean = false
 )
 
 @HiltViewModel
@@ -33,7 +37,16 @@ class CorridaDetalhesViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, erro = null) }
             try {
                 val corrida = corridaRepository.getCorridaDetalhes(corridaId)
-                _uiState.update { it.copy(isLoading = false, corrida = corrida) }
+                val capacityCheck = runCatching {
+                    corridaRepository.getCapacityCheck(corridaId)
+                }.getOrNull()
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        corrida = corrida,
+                        capacityCheck = capacityCheck
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
@@ -47,6 +60,13 @@ class CorridaDetalhesViewModel @Inject constructor(
 
     fun aceitarCorrida(corridaId: String) {
         viewModelScope.launch {
+            val capacityCheck = _uiState.value.capacityCheck
+            if (capacityCheck != null && !capacityCheck.fits) {
+                _uiState.update { state ->
+                    state.copy(erro = capacityCheck.reason)
+                }
+                return@launch
+            }
             _uiState.update { it.copy(isAceitando = true, erro = null) }
             try {
                 corridaRepository.aceitarCorrida(corridaId)
@@ -56,6 +76,40 @@ class CorridaDetalhesViewModel @Inject constructor(
                     it.copy(
                         isAceitando = false,
                         erro = e.message ?: "Erro ao aceitar corrida"
+                    )
+                }
+            }
+        }
+    }
+
+    fun recusarCorrida(
+        corridaId: String,
+        categoria: String,
+        motivo: String
+    ) {
+        val normalizedReason = motivo.trim()
+        if (normalizedReason.length < 3) {
+            _uiState.update {
+                it.copy(erro = "Informe o motivo da recusa com pelo menos 3 caracteres.")
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRecusando = true, erro = null) }
+            try {
+                corridaRepository.recusarCorrida(corridaId, categoria, normalizedReason)
+                _uiState.update {
+                    it.copy(
+                        isRecusando = false,
+                        recusaComSucesso = true
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isRecusando = false,
+                        erro = e.message ?: "Erro ao recusar corrida"
                     )
                 }
             }

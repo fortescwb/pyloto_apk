@@ -4,24 +4,22 @@ import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pyloto.entregador.domain.usecase.auth.LoginUseCase
+import com.pyloto.entregador.domain.usecase.entregador.ObterOnboardingStatusUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/**
- * ViewModel da tela de Login.
- *
- * Responsabilidades:
- *   - Validação local de campos (email formato, senha mínima)
- *   - Chamada ao [LoginUseCase] e tratamento de resultado
- *   - Emissão de evento one-shot [LoginEvent.LoginSuccess] para navegação
- *
- * Erro de rede é mapeado para mensagem amigável em pt-BR.
- */
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val loginUseCase: LoginUseCase
+    private val loginUseCase: LoginUseCase,
+    private val obterOnboardingStatusUseCase: ObterOnboardingStatusUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -41,19 +39,18 @@ class LoginViewModel @Inject constructor(
     fun login() {
         val state = _uiState.value
 
-        // Validação local antes de chamar a API
         var hasError = false
 
         if (state.email.isBlank()) {
-            _uiState.update { it.copy(emailError = "Email é obrigatório") }
+            _uiState.update { it.copy(emailError = "Email e obrigatorio") }
             hasError = true
         } else if (!Patterns.EMAIL_ADDRESS.matcher(state.email.trim()).matches()) {
-            _uiState.update { it.copy(emailError = "Formato de email inválido") }
+            _uiState.update { it.copy(emailError = "Formato de email invalido") }
             hasError = true
         }
 
         if (state.senha.isBlank()) {
-            _uiState.update { it.copy(senhaError = "Senha é obrigatória") }
+            _uiState.update { it.copy(senhaError = "Senha e obrigatoria") }
             hasError = true
         } else if (state.senha.length < 6) {
             _uiState.update { it.copy(senhaError = "Senha deve ter pelo menos 6 caracteres") }
@@ -65,45 +62,51 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             loginUseCase(state.email.trim(), state.senha)
-                .onSuccess {
+                .onSuccess { token ->
+                    val requiresOnboarding = runCatching {
+                        !obterOnboardingStatusUseCase().prontoParaOperacao
+                    }.getOrElse {
+                        true
+                    }
                     _uiState.update { it.copy(isLoading = false) }
-                    _events.emit(LoginEvent.LoginSuccess)
+                    _events.emit(
+                        LoginEvent.LoginSuccess(
+                            requiresOnboarding = requiresOnboarding || token.requiresDigitalContractSignature
+                        )
+                    )
                 }
-                .onFailure { e ->
+                .onFailure { error ->
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            error = mapErrorMessage(e)
+                            error = mapErrorMessage(error)
                         )
                     }
                 }
         }
     }
 
-    /**
-     * Mapeia exceções para mensagens amigáveis ao usuário.
-     */
-    private fun mapErrorMessage(e: Throwable): String {
+    private fun mapErrorMessage(error: Throwable): String {
         return when {
-            e is java.net.UnknownHostException ||
-                e is java.net.ConnectException ->
-                "Sem conexão com a internet. Verifique sua rede e tente novamente."
+            error is java.net.UnknownHostException ||
+                error is java.net.ConnectException ->
+                "Sem conexao com a internet. Verifique sua rede e tente novamente."
 
-            e is java.net.SocketTimeoutException ->
+            error is java.net.SocketTimeoutException ->
                 "Servidor demorou para responder. Tente novamente."
 
-            e.message?.contains("401") == true ||
-                e.message?.contains("credentials") == true ->
+            error.message?.contains("401") == true ||
+                error.message?.contains("credentials") == true ->
                 "Email ou senha incorretos."
 
-            e.message?.contains("403") == true ->
-                "Conta bloqueada. Entre em contato com o suporte."
+            error.message?.contains("403") == true ->
+                "Conta bloqueada ou sem liberacao operacional."
 
-            e.message?.contains("429") == true ->
+            error.message?.contains("429") == true ->
                 "Muitas tentativas. Aguarde um momento e tente novamente."
 
             else ->
-                e.message ?: "Erro ao fazer login. Tente novamente."
+                error.message ?: "Erro ao fazer login. Tente novamente."
         }
     }
 }
@@ -118,5 +121,7 @@ data class LoginUiState(
 )
 
 sealed class LoginEvent {
-    object LoginSuccess : LoginEvent()
+    data class LoginSuccess(
+        val requiresOnboarding: Boolean
+    ) : LoginEvent()
 }

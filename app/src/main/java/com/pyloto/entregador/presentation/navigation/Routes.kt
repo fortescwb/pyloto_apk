@@ -1,15 +1,9 @@
 package com.pyloto.entregador.presentation.navigation
 
-/**
- * Definição centralizada de rotas de navegação.
- * Preparada para deep links e navegação aninhada.
- */
 object Routes {
-    // Auth
     const val LOGIN = "login"
-    const val REGISTER = "register"
+    const val CONTRACT_SIGNATURE = "contract_signature"
 
-    // Main
     const val HOME = "home"
     const val CORRIDAS = "corridas"
     const val CORRIDA_DETALHES = "corrida_detalhes"
@@ -21,7 +15,6 @@ object Routes {
     const val NOTIFICACOES = "notificacoes"
     const val CONFIGURACOES = "configuracoes"
 
-    // Deep link patterns
     fun corridaDetalhes(corridaId: String) = "$CORRIDA_DETALHES/$corridaId"
     fun corridaAtiva(corridaId: String) = "$CORRIDA_ATIVA/$corridaId"
     fun chat(corridaId: String) = "$CHAT/$corridaId"

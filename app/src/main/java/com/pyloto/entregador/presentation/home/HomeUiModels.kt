@@ -2,6 +2,8 @@ package com.pyloto.entregador.presentation.home
 
 import com.pyloto.entregador.domain.model.Corrida
 import com.pyloto.entregador.domain.model.DailyStats
+import com.pyloto.entregador.domain.model.AgendaTrabalho
+import com.pyloto.entregador.domain.model.OperationalCapacity
 import com.pyloto.entregador.core.util.Constants
 
 data class HomeUiState(
@@ -14,7 +16,10 @@ data class HomeUiState(
     val cidadeAtual: String = "Ponta Grossa, PR",
     val regiaoAtual: String = "Centro",
     val dailyStats: DailyStats = DailyStats(),
-    val dailyGoal: Double = Constants.DEFAULT_DAILY_GOAL
+    val dailyGoal: Double = Constants.DEFAULT_DAILY_GOAL,
+    val operationalCapacity: OperationalCapacity? = null,
+    val agendaTrabalho: AgendaTrabalho? = null,
+    val isUpdatingAgenda: Boolean = false
 )
 
 enum class HomeModoVisualizacao {
@@ -30,4 +35,3 @@ data class HomeLocation(
 sealed class HomeEvent {
     data class CorridaAceita(val corridaId: String) : HomeEvent()
 }
-

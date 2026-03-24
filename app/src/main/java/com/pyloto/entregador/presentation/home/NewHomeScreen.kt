@@ -12,10 +12,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
@@ -110,7 +110,11 @@ fun NewHomeScreen(
             uiState.erro != null -> {
                 ErrorState(
                     error = uiState.erro,
-                    onRetry = viewModel::loadCorridas,
+                    onRetry = {
+                        viewModel.loadCorridas()
+                        viewModel.loadOperationalCapacity()
+                        viewModel.loadAgendaTrabalho()
+                    },
                     modifier = Modifier.padding(paddingValues)
                 )
             }
@@ -122,6 +126,8 @@ fun NewHomeScreen(
                         viewModel.aceitarCorrida(corridaId)
                         onCorridaAccept(corridaId)
                     },
+                    onAgendarDia = viewModel::agendarDia,
+                    onCancelarAgendamento = viewModel::cancelarAgendamento,
                     onCorridaDetails = onCorridaClick,
                     modifier = Modifier.padding(paddingValues)
                 )
@@ -138,6 +144,8 @@ fun NewHomeScreen(
 private fun HomeContent(
     uiState: HomeUiState,
     onCorridaAccept: (String) -> Unit,
+    onAgendarDia: (String) -> Unit,
+    onCancelarAgendamento: (String) -> Unit,
     onCorridaDetails: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -169,7 +177,27 @@ private fun HomeContent(
             )
         }
 
+        if (uiState.operationalCapacity != null) {
+            item(key = "operational_capacity") {
+                OperationalCapacityCard(
+                    uiState = uiState,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+
         // ── Seção 3: Mapa Compacto (se localização disponível) ──
+        if (uiState.agendaTrabalho != null) {
+            item(key = "agenda_trabalho") {
+                AgendaTrabalhoCard(
+                    uiState = uiState,
+                    onAgendarDia = onAgendarDia,
+                    onCancelarAgendamento = onCancelarAgendamento,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+
         if (uiState.localizacaoAtual != null) {
             item(key = "compact_map") {
                 CompactMapSection(
@@ -217,6 +245,287 @@ private fun HomeContent(
 /**
  * Header da seção de pedidos disponíveis com contagem.
  */
+@Composable
+private fun OperationalCapacityCard(
+    uiState: HomeUiState,
+    modifier: Modifier = Modifier
+) {
+    val capacity = uiState.operationalCapacity ?: return
+    val containerColor = when {
+        capacity.isBlocked -> Color(0xFFFFF1F0)
+        capacity.isNearLimit -> Color(0xFFFFF7E5)
+        else -> Color.White
+    }
+    val titleColor = when {
+        capacity.isBlocked -> Color(0xFFB42318)
+        capacity.isNearLimit -> Color(0xFFB54708)
+        else -> PylotoColors.MilitaryGreen
+    }
+
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = containerColor)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Capacidade do baú",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = titleColor
+                    )
+                    Text(
+                        text = "Baú ${capacity.bauCapacidadeLitros}L • regra ${capacity.policyVersion}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = PylotoColors.TextSecondary
+                    )
+                }
+                Text(
+                    text = when {
+                        capacity.isBlocked -> "Bloqueado"
+                        capacity.isNearLimit -> "Margem curta"
+                        else -> "Disponível"
+                    },
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = titleColor
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                CapacityMetricColumn(
+                    label = "Volume",
+                    remaining = "${capacity.remaining.volumeLitros.toInt()} L",
+                    limit = "${capacity.limits.volumeLitros.toInt()} L",
+                    modifier = Modifier.weight(1f)
+                )
+                CapacityMetricColumn(
+                    label = "Peso",
+                    remaining = "${capacity.remaining.pesoKg.toInt()} kg",
+                    limit = "${capacity.limits.pesoKg.toInt()} kg",
+                    modifier = Modifier.weight(1f)
+                )
+                CapacityMetricColumn(
+                    label = "Valor",
+                    remaining = formatCurrency(capacity.remaining.valorReais),
+                    limit = formatCurrency(capacity.limits.valorReais),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            if (capacity.blockedReason.isNotBlank() || capacity.nearLimitDimensions.isNotEmpty()) {
+                Text(
+                    text = capacity.blockedReason.ifBlank {
+                        "Próximo do limite em ${capacity.nearLimitDimensions.joinToString(", ") { it.replace("_", " ") }}."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = titleColor
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AgendaTrabalhoCard(
+    uiState: HomeUiState,
+    onAgendarDia: (String) -> Unit,
+    onCancelarAgendamento: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val agenda = uiState.agendaTrabalho ?: return
+    val bloqueioAtivo = agenda.bloqueioAbertura.ativo
+    val bucketHoje = agenda.operacaoHoje.bucket
+    val containerColor = when {
+        bloqueioAtivo -> Color(0xFFFFF4E8)
+        bucketHoje == "agendado" -> Color(0xFFF3FBF6)
+        else -> Color.White
+    }
+    val titleColor = when {
+        bloqueioAtivo -> Color(0xFFB54708)
+        bucketHoje == "agendado" -> PylotoColors.MilitaryGreen
+        else -> PylotoColors.Black
+    }
+
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = containerColor)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "Agenda de trabalho",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = titleColor
+                )
+                Text(
+                    text = agenda.operacaoHoje.message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PylotoColors.TextSecondary
+                )
+                if (bloqueioAtivo && agenda.bloqueioAbertura.motivo.isNotBlank()) {
+                    Text(
+                        text = agenda.bloqueioAbertura.motivo,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = titleColor
+                    )
+                }
+            }
+
+            agenda.dias.forEach { dia ->
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = when (dia.status) {
+                            "agendado" -> Color(0xFFEAF7EE)
+                            "cancelado_tardio", "no_show" -> Color(0xFFFFF1F0)
+                            else -> Color.White
+                        }
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = dia.titulo,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = "${dia.data} • ${dia.inicioLocal} às ${dia.fimLocal}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = PylotoColors.TextSecondary
+                                )
+                            }
+                            Text(
+                                text = formatAgendaStatus(dia.status),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = when (dia.status) {
+                                    "agendado" -> PylotoColors.MilitaryGreen
+                                    "cancelado_tardio", "no_show" -> Color(0xFFB42318)
+                                    else -> PylotoColors.TechBlue
+                                }
+                            )
+                        }
+
+                        if (!dia.mensagem.isNullOrBlank()) {
+                            Text(
+                                text = dia.mensagem,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = PylotoColors.TextSecondary
+                            )
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            if (dia.canSchedule) {
+                                Button(
+                                    onClick = { onAgendarDia(dia.data) },
+                                    enabled = !uiState.isUpdatingAgenda
+                                ) {
+                                    if (uiState.isUpdatingAgenda) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(18.dp),
+                                            strokeWidth = 2.dp
+                                        )
+                                    } else {
+                                        Text("Agendar")
+                                    }
+                                }
+                            }
+
+                            if (dia.canCancel && dia.agendamentoId != null) {
+                                Button(
+                                    onClick = { onCancelarAgendamento(dia.agendamentoId) },
+                                    enabled = !uiState.isUpdatingAgenda,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFFEEF2F6),
+                                        contentColor = PylotoColors.TechBlue
+                                    )
+                                ) {
+                                    Text("Cancelar")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            val ultimoRegistro = agenda.historico.firstOrNull()
+            if (ultimoRegistro != null) {
+                Text(
+                    text = "Ultimo registro: ${formatAgendaStatus(ultimoRegistro.status)} em ${ultimoRegistro.data}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PylotoColors.TextSecondary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CapacityMetricColumn(
+    label: String,
+    remaining: String,
+    limit: String,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = PylotoColors.TextSecondary
+        )
+        Text(
+            text = remaining,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = PylotoColors.Black
+        )
+        Text(
+            text = "limite $limit",
+            style = MaterialTheme.typography.bodySmall,
+            color = PylotoColors.TextSecondary
+        )
+    }
+}
+
+private fun formatCurrency(value: Double): String {
+    return "R$ %.2f".format(value)
+}
+
+private fun formatAgendaStatus(value: String): String {
+    return when (value) {
+        "agendado" -> "Agendado"
+        "cancelado" -> "Cancelado"
+        "cancelado_tardio" -> "Cancelamento tardio"
+        "no_show" -> "No-show"
+        "concluido" -> "Concluido"
+        else -> value.replace("_", " ").replaceFirstChar { it.uppercase() }
+    }
+}
+
 @Composable
 private fun AvailableOrdersHeader(
     count: Int
@@ -271,7 +580,7 @@ private fun EnhancedBottomNavigation(
         NavigationBarItem(
             selected = selectedTab == "corridas",
             onClick = onCorridasClick,
-            icon = { Icon(Icons.Default.List, contentDescription = null) },
+            icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
             label = { Text("Corridas") },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = PylotoColors.MilitaryGreen,
@@ -471,6 +780,8 @@ private fun NewHomeScreenPreview() {
             HomeContent(
                 uiState = mockUiState,
                 onCorridaAccept = {},
+                onAgendarDia = {},
+                onCancelarAgendamento = {},
                 onCorridaDetails = {},
                 modifier = Modifier.padding(paddingValues)
             )

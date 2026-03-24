@@ -7,15 +7,15 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.pyloto.entregador.presentation.auth.login.LoginScreen
-import com.pyloto.entregador.presentation.auth.register.RegisterScreen
-import com.pyloto.entregador.presentation.home.NewHomeScreen
+import com.pyloto.entregador.presentation.chat.ChatScreen
 import com.pyloto.entregador.presentation.corrida.ativa.CorridaAtivaScreen
 import com.pyloto.entregador.presentation.corrida.disponivel.CorridaDetalhesScreen
 import com.pyloto.entregador.presentation.corrida.historico.HistoricoScreen
 import com.pyloto.entregador.presentation.corridas.CorridasScreen
 import com.pyloto.entregador.presentation.ganhos.GanhosScreen
+import com.pyloto.entregador.presentation.home.NewHomeScreen
+import com.pyloto.entregador.presentation.onboarding.ContractSignatureScreen
 import com.pyloto.entregador.presentation.perfil.PerfilScreen
-import com.pyloto.entregador.presentation.chat.ChatScreen
 
 @Composable
 fun PylotoNavGraph(
@@ -26,32 +26,36 @@ fun PylotoNavGraph(
         navController = navController,
         startDestination = startDestination
     ) {
-        // ==================== Auth ====================
         composable(Routes.LOGIN) {
             LoginScreen(
-                onLoginSuccess = {
-                    navController.navigate(Routes.HOME) {
+                onLoginSuccess = { requiresOnboarding ->
+                    val destination = if (requiresOnboarding) {
+                        Routes.CONTRACT_SIGNATURE
+                    } else {
+                        Routes.HOME
+                    }
+                    navController.navigate(destination) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
-                },
-                onNavigateToRegister = {
-                    navController.navigate(Routes.REGISTER)
                 }
             )
         }
 
-        composable(Routes.REGISTER) {
-            RegisterScreen(
-                onRegisterSuccess = {
+        composable(Routes.CONTRACT_SIGNATURE) {
+            ContractSignatureScreen(
+                onOnboardingCompleted = {
                     navController.navigate(Routes.HOME) {
-                        popUpTo(Routes.LOGIN) { inclusive = true }
+                        popUpTo(Routes.CONTRACT_SIGNATURE) { inclusive = true }
                     }
                 },
-                onNavigateBack = { navController.popBackStack() }
+                onLogout = {
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
 
-        // ==================== Main ====================
         composable(Routes.HOME) {
             NewHomeScreen(
                 onCorridaClick = { corridaId ->
@@ -79,6 +83,11 @@ fun PylotoNavGraph(
                     navController.navigate(Routes.corridaAtiva(corridaId)) {
                         popUpTo(Routes.HOME)
                     }
+                },
+                onCorridaRecusada = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME) { inclusive = true }
+                    }
                 }
             )
         }
@@ -95,8 +104,8 @@ fun PylotoNavGraph(
                         popUpTo(Routes.HOME) { inclusive = true }
                     }
                 },
-                onChatClick = { corridaId ->
-                    navController.navigate(Routes.chat(corridaId))
+                onChatClick = { activeCorridaId ->
+                    navController.navigate(Routes.chat(activeCorridaId))
                 }
             )
         }

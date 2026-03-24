@@ -4,7 +4,18 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -14,13 +25,27 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -38,8 +63,7 @@ import com.pyloto.entregador.presentation.theme.PylotoTheme
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: () -> Unit,
-    onNavigateToRegister: () -> Unit,
+    onLoginSuccess: (Boolean) -> Unit,
     viewModel: LoginViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -49,7 +73,7 @@ fun LoginScreen(
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                is LoginEvent.LoginSuccess -> onLoginSuccess()
+                is LoginEvent.LoginSuccess -> onLoginSuccess(event.requiresOnboarding)
             }
         }
     }
@@ -69,9 +93,6 @@ fun LoginScreen(
         ) {
             Spacer(modifier = Modifier.height(80.dp))
 
-            // ─── Branding Area ────────────────────────────────────
-
-            // Logo placeholder — badge dourado com inicial
             Surface(
                 modifier = Modifier.size(88.dp),
                 shape = MaterialTheme.shapes.large,
@@ -111,15 +132,13 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Faça login para começar suas entregas",
+                text = "Faca login para iniciar seu fluxo operacional",
                 style = MaterialTheme.typography.bodyMedium,
                 color = PylotoColors.TextSecondary,
                 textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(48.dp))
-
-            // ─── Form Card ────────────────────────────────────────
 
             Surface(
                 modifier = Modifier.fillMaxWidth(),
@@ -131,7 +150,6 @@ fun LoginScreen(
                     modifier = Modifier.padding(24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Email field
                     OutlinedTextField(
                         value = uiState.email,
                         onValueChange = viewModel::onEmailChange,
@@ -167,7 +185,6 @@ fun LoginScreen(
                         )
                     )
 
-                    // Senha field
                     OutlinedTextField(
                         value = uiState.senha,
                         onValueChange = viewModel::onSenhaChange,
@@ -182,10 +199,16 @@ fun LoginScreen(
                         trailingIcon = {
                             IconButton(onClick = { senhaVisivel = !senhaVisivel }) {
                                 Icon(
-                                    imageVector = if (senhaVisivel) Icons.Default.VisibilityOff
-                                    else Icons.Default.Visibility,
-                                    contentDescription = if (senhaVisivel) "Ocultar senha"
-                                    else "Mostrar senha",
+                                    imageVector = if (senhaVisivel) {
+                                        Icons.Default.VisibilityOff
+                                    } else {
+                                        Icons.Default.Visibility
+                                    },
+                                    contentDescription = if (senhaVisivel) {
+                                        "Ocultar senha"
+                                    } else {
+                                        "Mostrar senha"
+                                    },
                                     tint = PylotoColors.TextSecondary
                                 )
                             }
@@ -194,8 +217,11 @@ fun LoginScreen(
                         supportingText = uiState.senhaError?.let { error ->
                             { Text(error, color = MaterialTheme.colorScheme.error) }
                         },
-                        visualTransformation = if (senhaVisivel) VisualTransformation.None
-                        else PasswordVisualTransformation(),
+                        visualTransformation = if (senhaVisivel) {
+                            VisualTransformation.None
+                        } else {
+                            PasswordVisualTransformation()
+                        },
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Password,
                             imeAction = ImeAction.Done
@@ -219,9 +245,8 @@ fun LoginScreen(
                         )
                     )
 
-                    // Esqueci senha link
                     TextButton(
-                        onClick = { /* TODO: Fluxo de recuperação de senha */ },
+                        onClick = { },
                         modifier = Modifier.align(Alignment.End),
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                     ) {
@@ -235,8 +260,6 @@ fun LoginScreen(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-
-            // ─── Error message ────────────────────────────────────
 
             AnimatedVisibility(
                 visible = uiState.error != null,
@@ -260,8 +283,6 @@ fun LoginScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-
-            // ─── CTA Principal — Dourado (ação primária no app) ──
 
             Button(
                 onClick = viewModel::login,
@@ -307,49 +328,50 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ─── Link para cadastro ───────────────────────────────
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium,
+                color = PylotoColors.White
             ) {
-                Text(
-                    text = "Ainda não tem conta?",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = PylotoColors.TextSecondary
-                )
-                TextButton(onClick = onNavigateToRegister) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Text(
-                        text = "Cadastre-se",
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            color = PylotoTheme.extendedColors.techBlue
+                        text = "Cadastro presencial",
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = PylotoColors.Black
                         )
+                    )
+                    Text(
+                        text = "O cadastro do parceiro e realizado presencialmente pela equipe Pyloto.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = PylotoColors.TextSecondary
+                    )
+                    Text(
+                        text = "No primeiro acesso, baixe o contrato assinado, conclua a assinatura digital via Gov.br e envie a referencia da via assinada.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = PylotoTheme.extendedColors.techBlue
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // ─── Selo de segurança ────────────────────────────────
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(bottom = 24.dp)
+            Surface(
+                shape = MaterialTheme.shapes.extraSmall,
+                color = PylotoTheme.extendedColors.militaryGreen.copy(alpha = 0.1f)
             ) {
-                Surface(
-                    shape = MaterialTheme.shapes.extraSmall,
-                    color = PylotoTheme.extendedColors.militaryGreen.copy(alpha = 0.1f)
-                ) {
-                    Text(
-                        text = "🔒 Conexão segura",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = PylotoTheme.extendedColors.militaryGreen
-                    )
-                }
+                Text(
+                    text = "Conexao segura",
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = PylotoTheme.extendedColors.militaryGreen
+                )
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
