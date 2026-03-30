@@ -3,6 +3,9 @@
 import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pyloto.entregador.core.calendar.CalendarPermissionChecker
+import com.pyloto.entregador.core.calendar.CalendarSyncManager
+import com.pyloto.entregador.domain.model.AgendaTrabalho
 import com.pyloto.entregador.domain.repository.LocationRepository
 import com.pyloto.entregador.domain.repository.PreferencesRepository
 import com.pyloto.entregador.domain.usecase.corrida.AceitarCorridaUseCase
@@ -37,7 +40,9 @@ class HomeViewModel @Inject constructor(
     private val atualizarStatusOnlineUseCase: AtualizarStatusOnlineUseCase,
     private val obterDailyStatsUseCase: ObterDailyStatsUseCase,
     private val locationRepository: LocationRepository,
-    private val preferencesRepository: PreferencesRepository
+    private val preferencesRepository: PreferencesRepository,
+    private val calendarSyncManager: CalendarSyncManager,
+    private val calendarPermissionChecker: CalendarPermissionChecker
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -132,6 +137,7 @@ class HomeViewModel @Inject constructor(
                 _uiState.update { state ->
                     state.copy(agendaTrabalho = agenda, erro = null)
                 }
+                syncCalendar(agenda)
             }.onFailure { error ->
                 _uiState.update {
                     it.copy(erro = error.message ?: "Erro ao carregar agenda operacional")
@@ -149,6 +155,7 @@ class HomeViewModel @Inject constructor(
                 _uiState.update { state ->
                     state.copy(agendaTrabalho = agenda, isUpdatingAgenda = false, erro = null)
                 }
+                syncCalendar(agenda)
                 loadCorridas()
             }.onFailure { error ->
                 _uiState.update {
@@ -170,6 +177,7 @@ class HomeViewModel @Inject constructor(
                 _uiState.update { state ->
                     state.copy(agendaTrabalho = agenda, isUpdatingAgenda = false, erro = null)
                 }
+                syncCalendar(agenda)
                 loadCorridas()
             }.onFailure { error ->
                 _uiState.update {
@@ -232,6 +240,21 @@ class HomeViewModel @Inject constructor(
     fun updateDailyGoal(newGoal: Double) {
         viewModelScope.launch {
             preferencesRepository.saveDailyGoal(newGoal)
+        }
+    }
+
+    fun hasCalendarPermission(): Boolean {
+        return calendarPermissionChecker.hasCalendarPermission()
+    }
+
+    fun onCalendarPermissionGranted() {
+        val agenda = _uiState.value.agendaTrabalho ?: return
+        syncCalendar(agenda)
+    }
+
+    private fun syncCalendar(agenda: AgendaTrabalho) {
+        viewModelScope.launch {
+            runCatching { calendarSyncManager.syncSchedule(agenda) }
         }
     }
 

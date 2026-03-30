@@ -32,6 +32,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -40,7 +41,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.pyloto.entregador.core.calendar.CalendarPermissionChecker
 import com.pyloto.entregador.domain.model.DailyStats
 import com.pyloto.entregador.presentation.home.components.CompactMapSection
 import com.pyloto.entregador.presentation.home.components.DailyGoalCard
@@ -81,6 +85,21 @@ fun NewHomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    val calendarPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val allGranted = permissions.values.all { it }
+        if (allGranted) {
+            viewModel.onCalendarPermissionGranted()
+        }
+    }
+
+    LaunchedEffect(uiState.agendaTrabalho) {
+        if (uiState.agendaTrabalho != null && !viewModel.hasCalendarPermission()) {
+            calendarPermissionLauncher.launch(CalendarPermissionChecker.REQUIRED_PERMISSIONS)
+        }
+    }
 
     Scaffold(
         topBar = {
