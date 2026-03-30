@@ -1,5 +1,6 @@
 package com.pyloto.entregador.core.network.interceptor
 
+import android.util.Log
 import com.pyloto.entregador.core.util.TokenManager
 import okhttp3.Interceptor
 import okhttp3.Response
@@ -8,7 +9,7 @@ import javax.inject.Singleton
 
 /**
  * Interceptor para injetar o token JWT em todas as requisições.
- * Suporta refresh automático quando o token expira (401).
+ * Executa refresh automático quando o backend retorna 401.
  */
 @Singleton
 class AuthInterceptor @Inject constructor(
@@ -16,6 +17,7 @@ class AuthInterceptor @Inject constructor(
 ) : Interceptor {
 
     companion object {
+        private const val TAG = "AuthInterceptor"
         private val NO_AUTH_ENDPOINTS = listOf(
             "auth/login",
             "auth/register",
@@ -26,7 +28,6 @@ class AuthInterceptor @Inject constructor(
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
 
-        // Ignora autenticação para endpoints públicos
         val isPublicEndpoint = NO_AUTH_ENDPOINTS.any {
             originalRequest.url.encodedPath.contains(it)
         }
@@ -38,7 +39,6 @@ class AuthInterceptor @Inject constructor(
         val token = tokenManager.getAccessToken()
             ?.takeIf { it.isNotBlank() }
         val builder = originalRequest.newBuilder()
-            .header("Content-Type", "application/json")
             .header("Accept", "application/json")
         if (token != null) {
             builder.header("Authorization", "Bearer $token")
@@ -47,16 +47,20 @@ class AuthInterceptor @Inject constructor(
 
         val response = chain.proceed(authenticatedRequest)
 
-        // Se receber 401, tenta refresh do token
         if (response.code == 401) {
             response.close()
+            Log.d(TAG, "401 recebido — tentando refresh do token")
+
             val newToken = tokenManager.refreshTokenSync()
             if (newToken != null) {
                 val retryRequest = originalRequest.newBuilder()
+                    .header("Accept", "application/json")
                     .header("Authorization", "Bearer $newToken")
                     .build()
                 return chain.proceed(retryRequest)
             }
+
+            Log.w(TAG, "Refresh falhou — propagando 401")
         }
 
         return response

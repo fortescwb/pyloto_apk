@@ -1,5 +1,6 @@
 ﻿package com.pyloto.entregador.core.util
 
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -8,6 +9,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -17,11 +20,21 @@ class TokenManager @Inject constructor(
 ) {
 
     private companion object {
+        const val TAG = "TokenManager"
         val ACCESS_TOKEN_KEY = stringPreferencesKey(Constants.PREF_ACCESS_TOKEN)
         val REFRESH_TOKEN_KEY = stringPreferencesKey(Constants.PREF_REFRESH_TOKEN)
         val USER_ID_KEY = stringPreferencesKey(Constants.PREF_USER_ID)
         val ONBOARDING_COMPLETE_KEY = booleanPreferencesKey(Constants.PREF_ONBOARDING_COMPLETE)
     }
+
+    private val refreshMutex = Mutex()
+
+    /**
+     * Callback registrado pelo NetworkModule para executar o refresh HTTP
+     * sem criar dependencia circular com ApiService/Retrofit.
+     */
+    @Volatile
+    var refreshExecutor: ((String) -> String?)? = null
 
     suspend fun saveTokens(accessToken: String, refreshToken: String) {
         dataStore.edit { prefs ->
@@ -59,11 +72,33 @@ class TokenManager @Inject constructor(
     }
 
     /**
-     * Refresh sincrono no interceptor nao esta habilitado neste ciclo.
-     * O refresh assinado continua via fluxo de auth da aplicacao.
+     * Executa refresh do token de forma sincronizada (mutex) para evitar
+     * que múltiplas chamadas 401 simultâneas disparem refreshes paralelos.
+     *
+     * Retorna o novo access token ou null em caso de falha.
      */
-    fun refreshTokenSync(): String? {
-        return null
+    fun refreshTokenSync(): String? = runBlocking {
+        refreshMutex.withLock {
+            try {
+                val currentRefresh = getRefreshToken()
+                    ?.takeIf { it.isNotBlank() }
+                    ?: return@runBlocking null
+
+                val executor = refreshExecutor ?: return@runBlocking null
+                val newAccessToken = executor(currentRefresh)
+
+                if (!newAccessToken.isNullOrBlank()) {
+                    Log.d(TAG, "Token refresh realizado com sucesso via interceptor")
+                    newAccessToken
+                } else {
+                    Log.w(TAG, "Refresh retornou token vazio; sessao invalidada")
+                    null
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Falha no refresh sincronizado: ${e.message}")
+                null
+            }
+        }
     }
 
     suspend fun clearTokens() {

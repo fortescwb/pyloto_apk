@@ -2,7 +2,9 @@ package com.pyloto.entregador.core.network
 
 import com.pyloto.entregador.core.network.interceptor.AuthInterceptor
 import com.pyloto.entregador.core.network.interceptor.NetworkTraceInterceptor
+import com.pyloto.entregador.core.util.TokenManager
 import com.pyloto.entregador.BuildConfig
+import com.pyloto.entregador.data.auth.remote.dto.RefreshTokenRequest
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -63,7 +65,30 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideApiService(retrofit: Retrofit): ApiService {
-        return retrofit.create(ApiService::class.java)
+    fun provideApiService(retrofit: Retrofit, tokenManager: TokenManager): ApiService {
+        val apiService = retrofit.create(ApiService::class.java)
+
+        tokenManager.refreshExecutor = { refreshToken ->
+            try {
+                val call = retrofit.create(ApiService::class.java)
+                val response = kotlinx.coroutines.runBlocking {
+                    call.refreshToken(RefreshTokenRequest(refreshToken = refreshToken))
+                }
+                val authData = response.requireData()
+                val newAccess = authData.accessToken.takeIf { it.isNotBlank() }
+                if (newAccess != null) {
+                    val newRefresh = authData.refreshToken?.takeIf { it.isNotBlank() }
+                        ?: refreshToken
+                    kotlinx.coroutines.runBlocking {
+                        tokenManager.saveTokens(newAccess, newRefresh)
+                    }
+                }
+                newAccess
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+        return apiService
     }
 }
