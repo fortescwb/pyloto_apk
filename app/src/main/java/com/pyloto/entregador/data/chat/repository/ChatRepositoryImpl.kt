@@ -31,7 +31,7 @@ class ChatRepositoryImpl @Inject constructor(
             EnviarMensagemRequest(conteudo = conteudo, tipo = tipo)
         )
         val entity = mensagemMapper.toEntity(
-            response.data,
+            response.requireData(),
             lida = true,
             sincronizada = true,
             corridaIdFallback = corridaId,
@@ -46,7 +46,7 @@ class ChatRepositoryImpl @Inject constructor(
             operation = "chat_mensagens_paginadas",
             remote = {
                 val response = apiService.getMensagens(corridaId, page)
-                val entities = response.data.items.map { msg ->
+                val entities = response.requireData().items.map { msg ->
                     mensagemMapper.toEntity(
                         msg,
                         sincronizada = true,

@@ -40,7 +40,7 @@ class CorridaRepositoryImpl @Inject constructor(
             isConnected = connectivityMonitor.isCurrentlyConnected(),
             remote = {
                 val response = apiService.getCorridasDisponiveis(lat, lng, raio)
-                val corridas = response.data.map { mapper.toDomain(it) }
+                val corridas = response.requireData().map { mapper.toDomain(it) }
                 corridaDao.insertAll(corridas.map { mapper.toEntity(it) })
                 corridas
             },
@@ -55,7 +55,7 @@ class CorridaRepositoryImpl @Inject constructor(
             operation = "corrida_detalhes",
             remote = {
                 val response = apiService.getCorridaDetalhes(corridaId)
-                val corrida = mapper.toDomain(response.data)
+                val corrida = mapper.toDomain(response.requireData())
                 corridaDao.insert(mapper.toEntity(corrida))
                 corrida
             },
@@ -69,12 +69,12 @@ class CorridaRepositoryImpl @Inject constructor(
 
     override suspend fun getCapacityCheck(corridaId: String): CapacityCheck {
         val response = apiService.getCorridaCapacityCheck(corridaId)
-        return response.data.toDomain()
+        return response.requireData().toDomain()
     }
 
     override suspend fun aceitarCorrida(corridaId: String): Corrida {
         val response = apiService.aceitarCorrida(corridaId)
-        val corrida = mapper.toDomain(response.data)
+        val corrida = mapper.toDomain(response.requireData())
         corridaDao.insert(mapper.toEntity(corrida))
         return corrida
     }
@@ -92,19 +92,19 @@ class CorridaRepositoryImpl @Inject constructor(
 
     override suspend fun iniciarCorrida(corridaId: String) {
         apiService.iniciarCorrida(corridaId)
-        val corrida = mapper.toDomain(apiService.getCorridaDetalhes(corridaId).data)
+        val corrida = mapper.toDomain(apiService.getCorridaDetalhes(corridaId).requireData())
         corridaDao.insert(mapper.toEntity(corrida))
     }
 
     override suspend fun coletarCorrida(corridaId: String) {
         apiService.coletarCorrida(corridaId)
-        val corrida = mapper.toDomain(apiService.getCorridaDetalhes(corridaId).data)
+        val corrida = mapper.toDomain(apiService.getCorridaDetalhes(corridaId).requireData())
         corridaDao.insert(mapper.toEntity(corrida))
     }
 
     override suspend fun finalizarCorrida(corridaId: String, fotoComprovante: String?) {
         apiService.finalizarCorrida(corridaId, FinalizacaoRequest(fotoComprovanteUrl = fotoComprovante))
-        val corrida = mapper.toDomain(apiService.getCorridaDetalhes(corridaId).data)
+        val corrida = mapper.toDomain(apiService.getCorridaDetalhes(corridaId).requireData())
         corridaDao.insert(mapper.toEntity(corrida))
     }
 
@@ -131,7 +131,7 @@ class CorridaRepositoryImpl @Inject constructor(
                 metadata = event.metadata.takeIf { it.isNotEmpty() }
             )
         )
-        val corrida = mapper.toDomain(response.data)
+        val corrida = mapper.toDomain(response.requireData())
         corridaDao.insert(mapper.toEntity(corrida))
         return corrida
     }
@@ -154,7 +154,7 @@ class CorridaRepositoryImpl @Inject constructor(
             fallbackValue = emptyList()
         ) {
             val response = apiService.getHistoricoCorridas(page, size)
-            response.data.items.map { mapper.toDomain(it) }
+            response.requireData().items.map { mapper.toDomain(it) }
         }
     }
 }

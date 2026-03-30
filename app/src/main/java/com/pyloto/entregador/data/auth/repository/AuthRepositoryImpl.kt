@@ -26,15 +26,16 @@ class AuthRepositoryImpl @Inject constructor(
         val response = apiService.login(
             LoginRequest(email = credentials.email, senha = credentials.senha)
         )
-        val refreshToken = response.data.refreshToken?.ifBlank { response.data.accessToken }
-            ?: response.data.accessToken
+        val authData = response.requireData()
+        val refreshToken = authData.refreshToken?.ifBlank { authData.accessToken }
+            ?: authData.accessToken
 
         val token = AuthToken(
-            accessToken = response.data.accessToken,
+            accessToken = authData.accessToken,
             refreshToken = refreshToken,
-            userId = response.data.parceiro?.id ?: "",
+            userId = authData.parceiro?.id ?: "",
             expiresIn = 3600L,
-            requiresDigitalContractSignature = response.data.requiresDigitalContractSignature
+            requiresDigitalContractSignature = authData.requiresDigitalContractSignature
         )
         persistAuthState(token)
         return token
@@ -48,13 +49,14 @@ class AuthRepositoryImpl @Inject constructor(
         val response = apiService.refreshToken(
             RefreshTokenRequest(refreshToken = currentRefreshToken)
         )
+        val authData = response.requireData()
 
-        val newAccessToken = response.data.accessToken.ifBlank {
+        val newAccessToken = authData.accessToken.ifBlank {
             throw IllegalStateException("Refresh endpoint retornou access_token vazio")
         }
-        val newRefreshToken = response.data.refreshToken?.ifBlank { currentRefreshToken }
+        val newRefreshToken = authData.refreshToken?.ifBlank { currentRefreshToken }
             ?: currentRefreshToken
-        val userId = response.data.parceiro?.id ?: tokenManager.getUserId() ?: ""
+        val userId = authData.parceiro?.id ?: tokenManager.getUserId() ?: ""
 
         val token = AuthToken(
             accessToken = newAccessToken,

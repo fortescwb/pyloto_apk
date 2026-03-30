@@ -41,7 +41,7 @@ class EntregadorRepositoryImpl @Inject constructor(
             operation = "entregador_perfil",
             remote = {
                 val response = apiService.getPerfil()
-                val entity = entregadorMapper.toEntity(response.data)
+                val entity = entregadorMapper.toEntity(response.requireData())
                 entregadorDao.insert(entity)
                 entregadorMapper.toDomain(entity)
             },
@@ -72,34 +72,34 @@ class EntregadorRepositoryImpl @Inject constructor(
 
     override suspend fun getGanhos(periodo: String, dataInicio: String?, dataFim: String?): Ganhos {
         val response = apiService.getGanhos(periodo, dataInicio, dataFim)
-        return ganhosMapper.toDomain(response.data)
+        return ganhosMapper.toDomain(response.requireData())
     }
 
     override suspend fun getOnboardingStatus(): OnboardingStatus {
-        val status = apiService.getOnboardingStatus().data.toDomain()
+        val status = apiService.getOnboardingStatus().requireData().toDomain()
         cacheOnboardingStatus(status)
         return status
     }
 
     override suspend fun getOperationalCapacity(): OperationalCapacity {
-        return apiService.getOperationalCapacity().data.toDomain()
+        return apiService.getOperationalCapacity().requireData().toDomain()
     }
 
     override suspend fun getWorkSchedule(): AgendaTrabalho {
-        return apiService.getWorkSchedule().data.toDomain()
+        return apiService.getWorkSchedule().requireData().toDomain()
     }
 
     override suspend fun createWorkSchedule(date: String): AgendaTrabalho {
         return apiService.createWorkSchedule(
             request = CriarAgendaRequest(data = date)
-        ).data.toDomain()
+        ).requireData().toDomain()
     }
 
     override suspend fun cancelWorkSchedule(scheduleId: String, reason: String?): AgendaTrabalho {
         return apiService.cancelWorkSchedule(
             agendaId = scheduleId,
             request = CancelarAgendaRequest(motivo = reason?.trim()?.ifBlank { null })
-        ).data.toDomain()
+        ).requireData().toDomain()
     }
 
     override suspend fun submitDigitalContractSignature(assinaturaDigitalRef: String): OnboardingStatus {
@@ -107,7 +107,7 @@ class EntregadorRepositoryImpl @Inject constructor(
             request = SubmitDigitalContractSignatureRequest(
                 assinaturaDigitalRef = assinaturaDigitalRef
             )
-        ).data.toDomain()
+        ).requireData().toDomain()
         cacheOnboardingStatus(status)
         return status
     }
@@ -123,7 +123,7 @@ class EntregadorRepositoryImpl @Inject constructor(
                 fotoVeiculoRef = fotoVeiculoRef,
                 placaInformada = placaInformada?.trim()?.ifBlank { null }
             )
-        ).data.toDomain()
+        ).requireData().toDomain()
         cacheOnboardingStatus(status)
         return status
     }

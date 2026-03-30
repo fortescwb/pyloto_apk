@@ -40,9 +40,9 @@ class ApiContractParsingTest {
         val response: ApiResponse<AuthToken> = gson.fromJson(json, type)
 
         assertThat(response.success).isTrue()
-        assertThat(response.data.accessToken).isEqualTo("access-jwt")
-        assertThat(response.data.refreshToken).isEqualTo("refresh-jwt")
-        assertThat(response.data.parceiro?.id).isEqualTo("par-123")
+        assertThat(response.requireData().accessToken).isEqualTo("access-jwt")
+        assertThat(response.requireData().refreshToken).isEqualTo("refresh-jwt")
+        assertThat(response.requireData().parceiro?.id).isEqualTo("par-123")
     }
 
     @Test
@@ -70,11 +70,11 @@ class ApiContractParsingTest {
         val type = object : TypeToken<ApiResponse<EntregadorPerfilResponse>>() {}.type
         val response: ApiResponse<EntregadorPerfilResponse> = gson.fromJson(json, type)
 
-        assertThat(response.data.veiculoTipo).isEqualTo("moto")
-        assertThat(response.data.veiculoPlaca).isEqualTo("ABC1234")
-        assertThat(response.data.rating).isEqualTo(4.9)
-        assertThat(response.data.totalCorridas).isEqualTo(12)
-        assertThat(response.data.statusOnline).isTrue()
+        assertThat(response.requireData().veiculoTipo).isEqualTo("moto")
+        assertThat(response.requireData().veiculoPlaca).isEqualTo("ABC1234")
+        assertThat(response.requireData().rating).isEqualTo(4.9)
+        assertThat(response.requireData().totalCorridas).isEqualTo(12)
+        assertThat(response.requireData().statusOnline).isTrue()
     }
 
     @Test
@@ -113,7 +113,7 @@ class ApiContractParsingTest {
         val type = object : TypeToken<ApiResponse<List<CorridaResponse>>>() {}.type
         val response: ApiResponse<List<CorridaResponse>> = gson.fromJson(json, type)
 
-        val corrida = response.data.first()
+        val corrida = response.requireData().first()
         assertThat(corrida.id).isEqualTo("PED-001")
         assertThat(corrida.valorEntrega).isEqualTo(22.5)
         assertThat(corrida.enderecoOrigem?.logradouro).isEqualTo("Rua A")
@@ -142,9 +142,9 @@ class ApiContractParsingTest {
         val type = object : TypeToken<ApiResponse<CorridaDetalhesResponse>>() {}.type
         val response: ApiResponse<CorridaDetalhesResponse> = gson.fromJson(json, type)
 
-        assertThat(response.data.id).isEqualTo("PED-010")
-        assertThat(response.data.aceitaEm).isEqualTo(1741290100.0)
-        assertThat(response.data.valorEntrega).isEqualTo(31.0)
+        assertThat(response.requireData().id).isEqualTo("PED-010")
+        assertThat(response.requireData().aceitaEm).isEqualTo(1741290100.0)
+        assertThat(response.requireData().valorEntrega).isEqualTo(31.0)
     }
 
     @Test
@@ -176,9 +176,9 @@ class ApiContractParsingTest {
         val type = object : TypeToken<ApiResponse<PaginatedResponse<MensagemResponse>>>() {}.type
         val response: ApiResponse<PaginatedResponse<MensagemResponse>> = gson.fromJson(json, type)
 
-        assertThat(response.data.items).hasSize(1)
-        assertThat(response.data.items.first().corridaId).isEqualTo("PED-001")
-        assertThat(response.data.items.first().tipoMensagem).isEqualTo("TEXTO")
+        assertThat(response.requireData().items).hasSize(1)
+        assertThat(response.requireData().items.first().corridaId).isEqualTo("PED-001")
+        assertThat(response.requireData().items.first().tipoMensagem).isEqualTo("TEXTO")
     }
 
     @Test
@@ -209,9 +209,9 @@ class ApiContractParsingTest {
         val type = object : TypeToken<ApiResponse<PaginatedResponse<NotificacaoResponse>>>() {}.type
         val response: ApiResponse<PaginatedResponse<NotificacaoResponse>> = gson.fromJson(json, type)
 
-        assertThat(response.data.items).hasSize(1)
-        assertThat(response.data.items.first().titulo).isEqualTo("Nova corrida")
-        assertThat(response.data.items.first().corpo).isEqualTo("Pedido disponivel")
-        assertThat(response.data.items.first().timestamp).isEqualTo(1741290300.0)
+        assertThat(response.requireData().items).hasSize(1)
+        assertThat(response.requireData().items.first().titulo).isEqualTo("Nova corrida")
+        assertThat(response.requireData().items.first().corpo).isEqualTo("Pedido disponivel")
+        assertThat(response.requireData().items.first().timestamp).isEqualTo(1741290300.0)
     }
 }
