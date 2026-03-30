@@ -48,6 +48,11 @@ fun PylotoNavGraph(
                         popUpTo(Routes.CONTRACT_SIGNATURE) { inclusive = true }
                     }
                 },
+                onSkip = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.CONTRACT_SIGNATURE) { inclusive = true }
+                    }
+                },
                 onLogout = {
                     navController.navigate(Routes.LOGIN) {
                         popUpTo(0) { inclusive = true }

@@ -139,6 +139,12 @@ class ContractSignatureViewModel @Inject constructor(
         }
     }
 
+    fun skip() {
+        viewModelScope.launch {
+            _events.emit(ContractSignatureEvent.SkipRequested)
+        }
+    }
+
     fun logout() {
         viewModelScope.launch {
             logoutUseCase()
@@ -209,5 +215,6 @@ data class ContractSignatureUiState(
 
 sealed class ContractSignatureEvent {
     object OnboardingCompleted : ContractSignatureEvent()
+    object SkipRequested : ContractSignatureEvent()
     object LogoutCompleted : ContractSignatureEvent()
 }

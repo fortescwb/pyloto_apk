@@ -47,6 +47,7 @@ import com.pyloto.entregador.presentation.theme.PylotoTheme
 @Composable
 fun ContractSignatureScreen(
     onOnboardingCompleted: () -> Unit,
+    onSkip: () -> Unit,
     onLogout: () -> Unit,
     viewModel: ContractSignatureViewModel = hiltViewModel()
 ) {
@@ -58,6 +59,7 @@ fun ContractSignatureScreen(
         viewModel.events.collect { event ->
             when (event) {
                 ContractSignatureEvent.OnboardingCompleted -> onOnboardingCompleted()
+                ContractSignatureEvent.SkipRequested -> onSkip()
                 ContractSignatureEvent.LogoutCompleted -> onLogout()
             }
         }
@@ -409,6 +411,19 @@ fun ContractSignatureScreen(
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth()
                         )
+                    }
+
+                    Button(
+                        onClick = viewModel::skip,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = PylotoColors.MilitaryGreen,
+                            contentColor = PylotoColors.White
+                        )
+                    ) {
+                        Text("Mais tarde")
                     }
 
                     TextButton(

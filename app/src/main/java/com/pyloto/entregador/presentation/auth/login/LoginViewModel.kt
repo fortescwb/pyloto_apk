@@ -4,7 +4,6 @@ import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pyloto.entregador.domain.usecase.auth.LoginUseCase
-import com.pyloto.entregador.domain.usecase.entregador.ObterOnboardingStatusUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,8 +17,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val loginUseCase: LoginUseCase,
-    private val obterOnboardingStatusUseCase: ObterOnboardingStatusUseCase
+    private val loginUseCase: LoginUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -62,17 +60,10 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             loginUseCase(state.email.trim(), state.senha)
-                .onSuccess { token ->
-                    val requiresOnboarding = runCatching {
-                        !obterOnboardingStatusUseCase().prontoParaOperacao
-                    }.getOrElse {
-                        true
-                    }
+                .onSuccess {
                     _uiState.update { it.copy(isLoading = false) }
                     _events.emit(
-                        LoginEvent.LoginSuccess(
-                            requiresOnboarding = requiresOnboarding || token.requiresDigitalContractSignature
-                        )
+                        LoginEvent.LoginSuccess(requiresOnboarding = false)
                     )
                 }
                 .onFailure { error ->
