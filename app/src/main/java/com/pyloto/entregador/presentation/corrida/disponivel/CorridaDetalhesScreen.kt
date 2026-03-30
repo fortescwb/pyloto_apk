@@ -23,6 +23,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.pyloto.entregador.domain.model.CapacityCheck
 import com.pyloto.entregador.domain.model.Corrida
 import com.pyloto.entregador.domain.model.Endereco
+import com.pyloto.entregador.domain.model.EnderecoMasking
 import com.pyloto.entregador.presentation.theme.PylotoColors
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -218,12 +219,13 @@ private fun CorridaDetalhesContent(
         }
 
         // ── Endereços ──────────────────────────────────────
+        val aceita = EnderecoMasking.isCorridaAceita(corrida.status)
         InfoCard(title = "Coleta") {
-            EnderecoInfo(endereco = corrida.origem)
+            EnderecoInfo(endereco = corrida.origem, aceita = aceita)
         }
 
         InfoCard(title = "Entrega") {
-            EnderecoInfo(endereco = corrida.destino)
+            EnderecoInfo(endereco = corrida.destino, aceita = aceita)
         }
 
         // ── Ações ──────────────────────────────────────────
@@ -537,7 +539,7 @@ private fun InfoRow(icon: ImageVector, text: String) {
 }
 
 @Composable
-private fun EnderecoInfo(endereco: Endereco) {
+private fun EnderecoInfo(endereco: Endereco, aceita: Boolean = true) {
     Row(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -550,15 +552,17 @@ private fun EnderecoInfo(endereco: Endereco) {
         )
         Column {
             Text(
-                text = endereco.enderecoFormatado,
+                text = EnderecoMasking.exibirEndereco(endereco, aceita),
                 style = MaterialTheme.typography.bodyMedium,
                 color = PylotoColors.TextPrimary
             )
-            Text(
-                text = "${endereco.cidade} · ${endereco.cep}",
-                style = MaterialTheme.typography.bodySmall,
-                color = PylotoColors.TextSecondary
-            )
+            if (aceita) {
+                Text(
+                    text = "${endereco.cidade} · ${endereco.cep}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PylotoColors.TextSecondary
+                )
+            }
         }
     }
 }
