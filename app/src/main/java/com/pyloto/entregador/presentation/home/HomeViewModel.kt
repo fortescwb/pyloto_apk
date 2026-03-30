@@ -1,6 +1,7 @@
 ﻿package com.pyloto.entregador.presentation.home
 
 import android.location.Location
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pyloto.entregador.core.calendar.CalendarPermissionChecker
@@ -25,8 +26,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 @HiltViewModel
@@ -56,7 +60,19 @@ class HomeViewModel @Inject constructor(
     init {
         observeGoals()
         observeLocation()
-        loadCorridas()
+        loadInitialData()
+    }
+
+    private fun loadInitialData() {
+        viewModelScope.launch {
+            // Aguarda localização antes de buscar corridas (máx 5s)
+            withTimeoutOrNull(5_000) {
+                locationRepository.getLastLocation()
+                    .filterNotNull()
+                    .first()
+            }
+            loadCorridas()
+        }
         loadDailyStats()
         loadOperationalCapacity()
         loadAgendaTrabalho()
@@ -95,9 +111,10 @@ class HomeViewModel @Inject constructor(
         }
 
         loadCorridasJob = viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, erro = null) }
+            _uiState.update { it.copy(isLoading = true) }
             obterCorridasUseCase(raio)
                 .catch { error ->
+                    Log.w(TAG, "Falha ao carregar corridas: ${error.message}")
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -125,6 +142,8 @@ class HomeViewModel @Inject constructor(
                 _uiState.update { state ->
                     state.copy(operationalCapacity = capacity)
                 }
+            }.onFailure { error ->
+                Log.w(TAG, "Falha ao carregar capacidade: ${error.message}")
             }
         }
     }
@@ -135,13 +154,11 @@ class HomeViewModel @Inject constructor(
                 obterAgendaTrabalhoUseCase()
             }.onSuccess { agenda ->
                 _uiState.update { state ->
-                    state.copy(agendaTrabalho = agenda, erro = null)
+                    state.copy(agendaTrabalho = agenda)
                 }
                 syncCalendar(agenda)
             }.onFailure { error ->
-                _uiState.update {
-                    it.copy(erro = error.message ?: "Erro ao carregar agenda operacional")
-                }
+                Log.w(TAG, "Falha ao carregar agenda: ${error.message}")
             }
         }
     }
@@ -228,11 +245,9 @@ class HomeViewModel @Inject constructor(
             runCatching {
                 obterDailyStatsUseCase()
             }.onSuccess { stats ->
-                _uiState.update { state -> state.copy(dailyStats = stats, erro = null) }
+                _uiState.update { state -> state.copy(dailyStats = stats) }
             }.onFailure { error ->
-                _uiState.update {
-                    it.copy(erro = error.message ?: "Erro ao carregar estatisticas")
-                }
+                Log.w(TAG, "Falha ao carregar stats: ${error.message}")
             }
         }
     }
@@ -263,6 +278,7 @@ class HomeViewModel @Inject constructor(
     }
 
     private companion object {
+        const val TAG = "HomeViewModel"
         const val RAIO_PADRAO_METROS = 5000
         const val RAIO_MAPA_METROS = 200
     }
