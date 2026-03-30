@@ -46,6 +46,7 @@ import com.pyloto.entregador.domain.model.Corrida
 import com.pyloto.entregador.domain.model.CorridaStatus
 import com.pyloto.entregador.domain.model.CorridaTimestamps
 import com.pyloto.entregador.domain.model.Endereco
+import com.pyloto.entregador.domain.model.EnderecoMasking
 import com.pyloto.entregador.presentation.corridas.CorridaComDistancia
 import com.pyloto.entregador.presentation.theme.PylotoColors
 import com.pyloto.entregador.presentation.theme.PylotoTheme
@@ -101,10 +102,11 @@ fun CorridaListCard(
             HorizontalDivider(color = PylotoColors.OutlineVariant, thickness = 1.dp)
 
             // ── Linha 2: Rota visual (origem → destino) ─────────
+            val aceita = EnderecoMasking.isCorridaAceita(corrida.status)
             RouteSection(
                 origemNome = corrida.cliente.nome,
-                origemEndereco = corrida.origem.enderecoFormatado,
-                destinoEndereco = corrida.destino.enderecoFormatado
+                origemEndereco = EnderecoMasking.exibirEndereco(corrida.origem, aceita),
+                destinoEndereco = EnderecoMasking.exibirEndereco(corrida.destino, aceita)
             )
 
             HorizontalDivider(color = PylotoColors.OutlineVariant, thickness = 1.dp)
