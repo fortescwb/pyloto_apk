@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import javax.inject.Inject
 
 @HiltViewModel
@@ -22,7 +23,31 @@ class CorridasViewModel @Inject constructor(
     val uiState: StateFlow<CorridasUiState> = _uiState.asStateFlow()
 
     init {
+        observeLocation()
         loadCorridas()
+    }
+
+    private fun observeLocation() {
+        viewModelScope.launch {
+            locationRepository.getLastLocation().collect { location ->
+                location ?: return@collect
+                val lat = location.latitude
+                val lng = location.longitude
+                if (!lat.isFinite() || !lng.isFinite()) return@collect
+
+                _uiState.update { state ->
+                    val latDiff = abs(state.entregadorLat - lat)
+                    val lngDiff = abs(state.entregadorLng - lng)
+                    if (latDiff < LOCATION_EPSILON && lngDiff < LOCATION_EPSILON) {
+                        return@update state
+                    }
+                    state.copy(
+                        entregadorLat = lat,
+                        entregadorLng = lng
+                    )
+                }
+            }
+        }
     }
 
     fun loadCorridas() {
@@ -69,4 +94,6 @@ class CorridasViewModel @Inject constructor(
         _uiState.update { it.copy(erro = null) }
     }
 }
+
+private const val LOCATION_EPSILON = 0.00001
 

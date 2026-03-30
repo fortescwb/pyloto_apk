@@ -24,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,6 +32,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -41,6 +43,7 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.pyloto.entregador.presentation.corridas.CorridaComDistancia
 import com.pyloto.entregador.presentation.theme.PylotoColors
+import kotlin.math.abs
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -69,11 +72,28 @@ fun CorridasMapView(
     }
 
     val entregadorPosition = remember(entregadorLat, entregadorLng) {
-        LatLng(entregadorLat, entregadorLng)
+        val lat = entregadorLat.takeIf(::isValidLatitude) ?: DEFAULT_LATITUDE
+        val lng = entregadorLng.takeIf(::isValidLongitude) ?: DEFAULT_LONGITUDE
+        LatLng(lat, lng)
     }
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(entregadorPosition, DEFAULT_ZOOM)
+    }
+
+    LaunchedEffect(entregadorPosition) {
+        val current = cameraPositionState.position.target
+        val shouldRecenter =
+            abs(current.latitude - entregadorPosition.latitude) > CAMERA_RECENTER_EPSILON ||
+                abs(current.longitude - entregadorPosition.longitude) > CAMERA_RECENTER_EPSILON
+        if (shouldRecenter) {
+            runCatching {
+                cameraPositionState.animate(
+                    update = CameraUpdateFactory.newLatLngZoom(entregadorPosition, DEFAULT_ZOOM),
+                    durationMs = CAMERA_ANIMATION_DURATION_MS
+                )
+            }
+        }
     }
 
     Column(
@@ -338,7 +358,15 @@ private fun MapCompactCard(
     }
 }
 
+private fun isValidLatitude(value: Double): Boolean = value.isFinite() && value in -90.0..90.0
+
+private fun isValidLongitude(value: Double): Boolean = value.isFinite() && value in -180.0..180.0
+
 private const val DEFAULT_ZOOM = 14f
+private const val CAMERA_ANIMATION_DURATION_MS = 600
+private const val CAMERA_RECENTER_EPSILON = 0.0001
+private const val DEFAULT_LATITUDE = -25.4284
+private const val DEFAULT_LONGITUDE = -49.2733
 private const val RADIUS_METERS = 250.0
 private const val STROKE_WIDTH = 3f
 private val CIRCLE_COLOR_NORMAL = Color(0x3034592A)

@@ -8,6 +8,8 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+import java.util.Properties
+
 android {
     namespace = "com.pyloto.entregador"
     compileSdk = 35
@@ -29,8 +31,22 @@ android {
             arg("room.schemaLocation", "$projectDir/schemas")
         }
 
-        // Maps API key from gradle.properties
-        manifestPlaceholders["MAPS_API_KEY"] = project.findProperty("MAPS_API_KEY") ?: ""
+        // Maps API key: prioriza gradle/local.properties, depois env var.
+        val localProperties = Properties().apply {
+            val file = rootProject.file("local.properties")
+            if (file.exists()) {
+                file.inputStream().use(::load)
+            }
+        }
+        val mapsApiKey = (
+            project.findProperty("MAPS_API_KEY") as String?
+                ?: localProperties.getProperty("MAPS_API_KEY")
+                ?: System.getenv("MAPS_API_KEY")
+            )
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?: "placeholder-replace-with-real-key"
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     buildTypes {
