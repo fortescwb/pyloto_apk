@@ -485,3 +485,21 @@ O backend `pyloto_atende` moveu o bloco de acesso operacional e despacho do parc
   - menos risco de quebrar oferta e disponibilidade ao mexer em perfil, onboarding ou financeiro;
   - base melhor para continuar a extracao de rota ativa e localizacao do parceiro;
   - nenhuma mudanca de contrato HTTP nesta rodada.
+
+## Atualizacao complementar 13 - `2026-03-31`
+
+O backend `pyloto_atende` moveu o bloco de deslocamento do parceiro para um subfeudo proprio.
+
+- Criada a subpasta:
+  - `src/parceiros/operacao/deslocamento/`
+- O que saiu de `src/parceiros/service.py`:
+  - armacao da rota ativa;
+  - finalizacao da rota ativa;
+  - update de localizacao simples;
+  - update de payload de localizacao;
+  - leitura da ultima localizacao;
+  - wrappers correlatos da `ParceiroService`.
+- Efeito pratico para o ecossistema do app:
+  - menos risco de quebrar rota ativa e tracking ao mexer em despacho, onboarding ou financeiro;
+  - base melhor para seguir limpando a camada REST do parceiro;
+  - nenhuma mudanca de contrato HTTP nesta rodada.
