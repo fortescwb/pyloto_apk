@@ -301,6 +301,25 @@ Mais uma parte de `src/pedidos/service.py` foi arrancada para fora do monolito n
   - liberacao do pedido apos pagamento aprovado.
 - Efeito pratico para o app:
   - menos risco de regressao silenciosa no fluxo que leva uma corrida de disponivel para aceito;
-  - menos acoplamento entre pagamento e estado operacional;
-  - base melhor para continuar as correcoes de aceite, cancelamento e historico.
+- menos acoplamento entre pagamento e estado operacional;
+- base melhor para continuar as correcoes de aceite, cancelamento e historico.
+- O contrato HTTP observado pelo app continua o mesmo nesta rodada.
+
+## Atualizacao complementar 3 - `2026-03-31`
+
+O backend `pyloto_atende` levou mais um golpe de machado em `src/pedidos/service.py`.
+
+- Criados os modulos:
+  - `src/pedidos/criacao.py`
+  - `src/pedidos/localizacao.py`
+  - `src/pedidos/precificacao.py`
+- O que saiu do monolito:
+  - criacao de pedido e extracao de endereco;
+  - atualizacao de localizacao geral;
+  - tracking de rota;
+  - precificacao manual.
+- Efeito pratico para o app:
+  - menos risco de regressao acidental ao mexer em criacao e tracking no mesmo arquivo;
+  - base melhor para evoluir mapa, historico e reidratacao da corrida ativa sem cavar mais fundo no lamaçal;
+  - terreno mais seguro para atacar depois as consultas de pedido e o bloco de onboarding do parceiro.
 - O contrato HTTP observado pelo app continua o mesmo nesta rodada.
