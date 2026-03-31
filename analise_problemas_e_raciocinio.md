@@ -410,3 +410,22 @@ O backend `pyloto_atende` abriu um feudo proprio para consulta de pedidos.
   - menos risco de quebrar leitura de pedido ao mexer em aceite, transicoes ou notificacoes;
   - base melhor para evoluir historico, detalhe de corrida e tracking sem continuar cavando no mesmo pantano;
   - nenhuma mudanca de contrato HTTP nesta rodada.
+
+## Atualizacao complementar 9 - `2026-03-31`
+
+O backend `pyloto_atende` moveu tambem a interacao do parceiro com a corrida para um feudo proprio.
+
+- Criados os modulos:
+  - `src/pedidos/parceiro/consulta.py`
+  - `src/pedidos/parceiro/decisao_guard.py`
+  - `src/pedidos/parceiro/aceite.py`
+  - `src/pedidos/parceiro/recusa.py`
+- O que saiu de `src/pedidos/service.py`:
+  - listagem de corridas disponiveis;
+  - historico do parceiro;
+  - aceite de corrida;
+  - recusa de corrida com reflexo reputacional.
+- Efeito pratico para o ecossistema do app:
+  - menos risco de quebrar oferta, aceite e historico ao mexer em tracking, notificacao ou transicoes;
+  - base melhor para evoluir filtros de oferta, regras de recusa e fluxo de corrida ativa sem continuar reabrindo o mesmo tumulo;
+  - nenhuma mudanca de contrato HTTP nesta rodada.
