@@ -530,3 +530,27 @@ O backend `pyloto_atende` arrancou de `src/parceiros/service.py` a camada public
   - menos risco de quebrar login, onboarding, disponibilidade, tracking e corrida ativa ao mexer em um fluxo vizinho;
   - base melhor para continuar a extracao dos helpers internos do parceiro sem reabrir o mesmo sarcofago;
   - nenhuma mudanca de contrato HTTP nesta rodada.
+
+## Atualizacao complementar 15 - `2026-03-31`
+
+O backend `pyloto_atende` domesticou a estrutura das pastas `financeiro`, `onboarding` e `operacao`, que ja estavam virando taberna de trolls sem mapa.
+
+- Nova topologia de `financeiro`:
+  - `src/parceiros/financeiro/base/`
+  - `src/parceiros/financeiro/ciclo/`
+  - `src/parceiros/financeiro/publico/`
+- Nova topologia de `onboarding`:
+  - `src/parceiros/onboarding/cadastro/`
+  - `src/parceiros/onboarding/consulta/`
+  - `src/parceiros/onboarding/documentos/`
+  - `src/parceiros/onboarding/incidentes/`
+  - `src/parceiros/onboarding/autosservico/`
+  - `src/parceiros/onboarding/administracao/`
+- Nova topologia de `operacao`:
+  - `src/parceiros/operacao/despacho/`
+  - `src/parceiros/operacao/compliance/`
+  - `src/parceiros/operacao/localizacao/`
+- Efeito pratico para o ecossistema do app:
+  - menos risco de quebrar onboarding, despacho, disponibilidade e tracking ao mexer em arquivos sem relacao direta;
+  - base muito melhor para continuar a queda de `src/parceiros/service.py` com imports limpos e dominios visiveis;
+  - nenhuma mudanca de contrato HTTP nesta rodada.
