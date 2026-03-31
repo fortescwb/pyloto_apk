@@ -345,3 +345,22 @@ O backend `pyloto_atende` moveu o bloco de onboarding do parceiro para um feudo 
 - Observacao importante:
   - dois testes de integracao que aceitam corridas seedadas em `2026-03-24` continuam falhando por um problema antigo de SLA contra o relogio real em `2026-03-31`;
   - isso nao aponta regressao do bloco de onboarding refatorado.
+
+## Atualizacao complementar 5 - `2026-03-31`
+
+O backend `pyloto_atende` perdeu mais um corredor podre de `src/parceiros/service.py`.
+
+- Criados os modulos:
+  - `src/parceiros/onboarding/admin_payload.py`
+  - `src/parceiros/onboarding/admin_creation.py`
+  - `src/parceiros/onboarding/admin_partner_record.py`
+  - `src/parceiros/onboarding/document_building.py`
+- O que saiu do monolito:
+  - normalizacao do payload de cadastro administrativo do entregador;
+  - criacao administrativa e persistencia do parceiro;
+  - montagem do registro de parceiro para onboarding;
+  - construcao e validacao dos documentos obrigatorios.
+- Efeito pratico para o ecossistema do app:
+  - menos risco de quebrar onboarding administrativo ao tocar regras operacionais do parceiro;
+  - base melhor para evoluir upload, revisao documental e bloqueios cadastrais sem cavar no mesmo pantano;
+  - nenhuma mudanca de contrato HTTP nesta rodada.
