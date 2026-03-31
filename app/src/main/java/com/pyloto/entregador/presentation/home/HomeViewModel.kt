@@ -56,6 +56,7 @@ class HomeViewModel @Inject constructor(
     val events: SharedFlow<HomeEvent> = _events.asSharedFlow()
 
     private var loadCorridasJob: Job? = null
+    private var hasLoadedFromFirstLocation = false
 
     init {
         observeGoals()
@@ -91,6 +92,11 @@ class HomeViewModel @Inject constructor(
             locationRepository.getLastLocation().collect { location ->
                 _uiState.update { state ->
                     state.copy(localizacaoAtual = location?.toHomeLocation())
+                }
+
+                if (location != null && !hasLoadedFromFirstLocation) {
+                    hasLoadedFromFirstLocation = true
+                    loadCorridas()
                 }
             }
         }

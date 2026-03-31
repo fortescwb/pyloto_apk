@@ -1,5 +1,6 @@
 package com.pyloto.entregador.presentation.corridas
 
+import android.Manifest
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -44,6 +45,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -51,9 +53,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.pyloto.entregador.presentation.corridas.components.CorridasListView
 import com.pyloto.entregador.presentation.corridas.components.CorridasMapView
+import com.pyloto.entregador.presentation.location.LocationPermissionSupport
 import com.pyloto.entregador.presentation.theme.PylotoColors
 import com.pyloto.entregador.presentation.theme.PylotoTheme
 
@@ -80,12 +85,53 @@ fun CorridasScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+
+    val backgroundLocationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) {
+        LocationPermissionSupport.startLocationTracking(context)
+        viewModel.loadCorridas()
+    }
+
+    val foregroundLocationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val foregroundGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        if (foregroundGranted) {
+            val needsBackground =
+                LocationPermissionSupport.shouldRequestBackgroundPermission() &&
+                    !LocationPermissionSupport.hasBackgroundPermission(context)
+            if (needsBackground) {
+                backgroundLocationPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+            } else {
+                LocationPermissionSupport.startLocationTracking(context)
+                viewModel.loadCorridas()
+            }
+        }
+    }
 
     // ── Snackbar de erro ────────────────────────────────────
     LaunchedEffect(uiState.erro) {
         uiState.erro?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.limparErro()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (!LocationPermissionSupport.hasForegroundPermission(context)) {
+            foregroundLocationPermissionLauncher.launch(LocationPermissionSupport.foregroundPermissions)
+        } else {
+            val needsBackground =
+                LocationPermissionSupport.shouldRequestBackgroundPermission() &&
+                    !LocationPermissionSupport.hasBackgroundPermission(context)
+            if (needsBackground) {
+                backgroundLocationPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+            }
+            LocationPermissionSupport.startLocationTracking(context)
+            viewModel.loadCorridas()
         }
     }
 

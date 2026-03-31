@@ -21,6 +21,7 @@ class CorridasViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(CorridasUiState())
     val uiState: StateFlow<CorridasUiState> = _uiState.asStateFlow()
+    private var hasLoadedFromLocation = false
 
     init {
         observeLocation()
@@ -46,6 +47,11 @@ class CorridasViewModel @Inject constructor(
                         entregadorLng = lng
                     )
                 }
+
+                if (!hasLoadedFromLocation) {
+                    hasLoadedFromLocation = true
+                    loadCorridas()
+                }
             }
         }
     }
@@ -55,8 +61,17 @@ class CorridasViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             try {
                 val location = locationRepository.getLastKnownLocation()
-                val lat = location?.latitude ?: _uiState.value.entregadorLat
-                val lng = location?.longitude ?: _uiState.value.entregadorLng
+                if (location == null) {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            erro = "Localização indisponível. Permita acesso à localização para ver corridas."
+                        )
+                    }
+                    return@launch
+                }
+                val lat = location.latitude
+                val lng = location.longitude
                 val corridas = corridaRepository.getCorridasDisponiveis(lat, lng)
                 _uiState.update {
                     it.copy(

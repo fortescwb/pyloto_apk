@@ -1,5 +1,6 @@
 package com.pyloto.entregador.presentation.home
 
+import android.Manifest
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -51,6 +53,7 @@ import com.pyloto.entregador.presentation.home.components.DailyGoalCard
 import com.pyloto.entregador.presentation.home.components.DailyStatsSection
 import com.pyloto.entregador.presentation.home.components.EnrichedCorridaCard
 import com.pyloto.entregador.presentation.home.components.HomeHeader
+import com.pyloto.entregador.presentation.location.LocationPermissionSupport
 import com.pyloto.entregador.presentation.theme.PylotoColors
 import com.pyloto.entregador.presentation.theme.PylotoTheme
 
@@ -85,6 +88,33 @@ fun NewHomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    val backgroundLocationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) {
+        LocationPermissionSupport.startLocationTracking(context)
+        viewModel.loadCorridas()
+    }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val foregroundGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+
+        if (foregroundGranted) {
+            val needsBackground =
+                LocationPermissionSupport.shouldRequestBackgroundPermission() &&
+                    !LocationPermissionSupport.hasBackgroundPermission(context)
+            if (needsBackground) {
+                backgroundLocationPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+            } else {
+                LocationPermissionSupport.startLocationTracking(context)
+                viewModel.loadCorridas()
+            }
+        }
+    }
 
     val calendarPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -98,6 +128,21 @@ fun NewHomeScreen(
     LaunchedEffect(uiState.agendaTrabalho) {
         if (uiState.agendaTrabalho != null && !viewModel.hasCalendarPermission()) {
             calendarPermissionLauncher.launch(CalendarPermissionChecker.REQUIRED_PERMISSIONS)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (!LocationPermissionSupport.hasForegroundPermission(context)) {
+            locationPermissionLauncher.launch(LocationPermissionSupport.foregroundPermissions)
+        } else {
+            val needsBackground =
+                LocationPermissionSupport.shouldRequestBackgroundPermission() &&
+                    !LocationPermissionSupport.hasBackgroundPermission(context)
+            if (needsBackground) {
+                backgroundLocationPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+            }
+            LocationPermissionSupport.startLocationTracking(context)
+            viewModel.loadCorridas()
         }
     }
 
