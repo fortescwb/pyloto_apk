@@ -467,3 +467,21 @@ O backend `pyloto_atende` concluiu a queda estrutural de `src/pedidos/service.py
   - menos risco de quebrar fluxo do entregador ao mexer em correcao manual feita pelo painel;
   - base melhor para evoluir aceite, corrida ativa, tracking e correcoes administrativas sem reabrir o mesmo tumulo;
   - nenhuma mudanca de contrato HTTP nesta rodada.
+
+## Atualizacao complementar 12 - `2026-03-31`
+
+O backend `pyloto_atende` moveu o bloco de acesso operacional e despacho do parceiro para modulos proprios.
+
+- Criados os modulos:
+  - `src/parceiros/operacao/access_control.py`
+  - `src/parceiros/operacao/dispatch_runtime.py`
+- O que saiu de `src/parceiros/service.py`:
+  - validacao de acesso operacional;
+  - validacao de acesso a despacho;
+  - contexto de despacho do parceiro;
+  - cheque de elegibilidade por corrida;
+  - filtro de parceiros disponiveis sob regra operacional real.
+- Efeito pratico para o ecossistema do app:
+  - menos risco de quebrar oferta e disponibilidade ao mexer em perfil, onboarding ou financeiro;
+  - base melhor para continuar a extracao de rota ativa e localizacao do parceiro;
+  - nenhuma mudanca de contrato HTTP nesta rodada.
