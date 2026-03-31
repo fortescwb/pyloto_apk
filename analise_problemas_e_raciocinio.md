@@ -445,3 +445,25 @@ O backend `pyloto_atende` moveu a jornada operacional da corrida para um subsubf
   - menos risco de quebrar execucao da corrida ao mexer em consulta, oferta ou notificacao;
   - base melhor para evoluir corrida ativa, tracking e telemetria sem continuar abrindo o mesmo sarcofago;
   - nenhuma mudanca de contrato HTTP nesta rodada.
+
+## Atualizacao complementar 11 - `2026-03-31`
+
+O backend `pyloto_atende` concluiu a queda estrutural de `src/pedidos/service.py` e separou o que e fluxo normal da corrida do que e bisturi manual do painel administrativo.
+
+- Criada a pasta:
+  - `src/pedidos/intervencoes_manuais/`
+- O que foi isolado nesse feudo:
+  - aprovacao manual de pagamento;
+  - envio para aguardando aprovacao;
+  - ajuste manual de precificacao;
+  - mudanca administrativa de status com auditoria e fechamento de rota.
+- A pasta `src/pedidos/orquestracao/` foi reorganizada em subpastas semanticas:
+  - `admin/`
+  - `entrada/`
+  - `estado/`
+  - `parceiro/`
+  - `rest/`
+- Efeito pratico para o ecossistema do app:
+  - menos risco de quebrar fluxo do entregador ao mexer em correcao manual feita pelo painel;
+  - base melhor para evoluir aceite, corrida ativa, tracking e correcoes administrativas sem reabrir o mesmo tumulo;
+  - nenhuma mudanca de contrato HTTP nesta rodada.
