@@ -11,7 +11,19 @@ Rodada implementada em `2026-03-31`:
 - As duas rotas agora devolvem snapshot operacional server-driven com `current_phase`, `current_step`, `allowed_actions`, `next_action`, `tracking_required` e `proof_of_delivery_required`.
 - `GET /corridas/rota-ativa` faz fallback sintetico a partir de pedidos ativos quando a `rota_ativa` persistida ainda nao estiver marcada como `ativa`.
 - Tambem foi corrigida a precedencia de roteamento no backend para impedir que `/{pedido_id}` sequestrasse `/corridas/meus` e `/corridas/rota-ativa`.
-- Proxima prioridade de backend mantida: corrigir `GET /corridas/disponiveis` para usar `lat/lng/raio` de verdade.
+- A refatoracao estrutural de `src/parceiros/service.py` foi iniciada no backend.
+  - A logica operacional do entregador passou a ser extraida para `src/parceiros/operacao/`.
+  - Isso atinge especialmente tracking, rota ativa, elegibilidade operacional, documentos e incidentes.
+- A rodada atual aprofundou a refatoracao de `src/parceiros/service.py`.
+  - A agenda operacional do parceiro foi extraida para `src/parceiros/agenda/`.
+  - Os modulos novos de agenda ficaram todos abaixo de 150 linhas.
+- `GET /corridas/disponiveis` foi corrigida no backend.
+  - A listagem agora aplica `dispatch_check` por item.
+  - Corridas ainda bloqueadas para parceiros nao agendados deixam de aparecer antes da liberacao remanescente.
+  - Cada item listado agora embute `dispatch_access`.
+- `GET /corridas/{id}/capacidade-check` tambem foi ajustada.
+  - Quando o impedimento real e de bucket de distribuicao, a razao retornada prioriza o bloqueio de despacho.
+- Proxima prioridade funcional de backend para essa frente: completar `GET /corridas/disponiveis` com filtro geoespacial real usando `lat/lng/raio`.
 
 ## Escopo e fontes
 
@@ -58,9 +70,9 @@ As maiores lacunas encontradas sao estas:
 | `POST /auth/login` | Sim | OK | Contrato alinhado ao app |
 | `POST /auth/refresh` | Sim | OK | Contrato alinhado ao app |
 | `POST /auth/logout` | Sim | OK com ressalvas | Ainda nao invalida token; ha TODO explicito no backend |
-| `GET /corridas/disponiveis` | Sim | OK com ressalvas graves | Backend nao usa `lat/lng/raio` para filtro/ranking e devolve contexto geografico insuficiente |
+| `GET /corridas/disponiveis` | Sim | OK com ressalvas graves | `dispatch_access` por item e filtro de liberacao remanescente foram corrigidos, mas o backend ainda nao usa `lat/lng/raio` para filtro/ranking geoespacial |
 | `GET /corridas/{id}` | Sim | OK com ressalvas | Falta expor estado operacional server-driven para reduzir logica no app |
-| `GET /corridas/{id}/capacidade-check` | Sim | OK | Bom contrato para bloqueio de aceite |
+| `GET /corridas/{id}/capacidade-check` | Sim | OK | Agora prioriza a razao de bloqueio de despacho quando a restricao real nao e capacidade fisica |
 | `POST /corridas/{id}/aceitar` | Sim | OK | Fluxo de aceite implementado |
 | `POST /corridas/{id}/recusar` | Sim | OK | Fluxo implementado, com categorias e reputacao |
 | `POST /corridas/{id}/iniciar` | Sim | OK | Backend inicia coleta ou entrega conforme status atual |
@@ -111,7 +123,7 @@ As maiores lacunas encontradas sao estas:
 
 | Rota | Problema atual | Tarefa de backend |
 |---|---|---|
-| `GET /corridas/disponiveis` | Recebe `lat/lng/raio`, mas nao usa esses parametros; tambem nao devolve `distancia_ate_coleta`, `eta_ate_coleta` ou ranking server-driven | Fazer filtro geoespacial real, ordenar por distancia/score de despacho e devolver payload pronto para UI |
+| `GET /corridas/disponiveis` | Ja aplica `dispatch_access` por item e bucket remanescente, mas ainda nao usa `lat/lng/raio`; tambem nao devolve `distancia_ate_coleta`, `eta_ate_coleta` ou ranking server-driven | Fazer filtro geoespacial real, ordenar por distancia/score de despacho e devolver payload pronto para UI |
 | `GET /corridas/{id}` | O app ainda infere `currentStep` localmente a partir de `status` | Devolver `current_step`, `current_phase`, `allowed_actions`, `route_session_id`, `tracking_required`, `proof_of_delivery_required` |
 | `POST /corridas/{id}/eventos` | Contrato muito generico para um fluxo que depende de etapas conhecidas | Validar `kind` com enum canonico, devolver `next_allowed_actions` e documentar claramente cada evento |
 | `POST /corridas/{id}/finalizar` | Backend aceita so URL/ref de comprovante; nao existe upload guiado | Integrar com fluxo de upload seguro e aceitar `upload_id` ou referencia emitida pelo proprio backend |
@@ -140,10 +152,10 @@ Estas nao entram como "falta no backend", mas ajudam a separar o que e backlog d
    - Deve incluir `route_session_id`, `fase`, `pedido_principal_id`, `pedido_ids`, `route_started_at`, `next_action` e deadlines.
    - Deve ser a rota usada para reidratar sessao apos restart do app.
 
-2. Corrigir de verdade `GET /corridas/disponiveis`.
-   - Usar `lat`, `lng` e `raio`.
-   - Ordenar por distancia ate a coleta e regras de despacho.
-   - Devolver `distancia_ate_coleta_m`, `eta_ate_coleta_min`, `distancia_total_m`, `tempo_total_min` e score/rank final.
+2. Completar `GET /corridas/disponiveis`.
+   - O backend ja aplica `dispatch_access` por item e respeita a liberacao remanescente.
+   - Ainda falta usar `lat`, `lng` e `raio`.
+   - Ainda falta ordenar por distancia ate a coleta e devolver `distancia_ate_coleta_m`, `eta_ate_coleta_min`, `distancia_total_m`, `tempo_total_min` e score/rank final.
 
 3. Implementar roteirizacao server-side.
    - Criar rota de calculo de rota otima para multiplas corridas.
@@ -232,7 +244,7 @@ O maior gap hoje nao e "aceitar corrida" ou "transicionar status". Isso ja exist
 Se eu tivesse que priorizar so o backend em uma ordem curta, faria assim:
 
 1. `GET /corridas/meus` + `GET /corridas/rota-ativa`
-2. corrigir `GET /corridas/disponiveis` para usar geo de verdade
+2. completar `GET /corridas/disponiveis` com geo de verdade
 3. roteirizacao server-side
 4. upload/presign para comprovantes e onboarding
 5. logout com revogacao
