@@ -395,3 +395,18 @@ O backend `pyloto_atende` abriu um feudo proprio para a conta do parceiro.
   - menos risco de quebrar login e perfil ao tocar agenda, onboarding ou bloqueios operacionais;
   - base melhor para evoluir autenticacao, perfil e contratos do parceiro sem reabrir o mesmo tumulo;
   - nenhuma mudanca de contrato HTTP nesta rodada.
+
+## Atualizacao complementar 8 - `2026-03-31`
+
+O backend `pyloto_atende` abriu um feudo proprio para consulta de pedidos.
+
+- Criada a pasta:
+  - `src/pedidos/consulta/`
+- O que saiu de `src/pedidos/service.py`:
+  - busca de pedido por ID;
+  - busca de pedido por numero legivel;
+  - listagem paginada com filtros.
+- Efeito pratico para o ecossistema do app:
+  - menos risco de quebrar leitura de pedido ao mexer em aceite, transicoes ou notificacoes;
+  - base melhor para evoluir historico, detalhe de corrida e tracking sem continuar cavando no mesmo pantano;
+  - nenhuma mudanca de contrato HTTP nesta rodada.
