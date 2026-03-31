@@ -251,3 +251,19 @@ Se eu tivesse que priorizar so o backend em uma ordem curta, faria assim:
 3. roteirizacao server-side
 4. upload/presign para comprovantes e onboarding
 5. logout com revogacao
+
+## Atualizacao de execucao - `2026-03-31`
+
+Nesta rodada nao houve mudanca de contrato HTTP para o app parceiro. O backend `pyloto_atende` foi refatorado internamente para tirar do monolito de `src/parceiros/service.py` o bloco de reputacao, penalidades e sincronizacao de conformidade.
+
+- Criada a pasta `src/parceiros/conformidade/` no backend, com modulos pequenos para:
+  - reputacao operacional;
+  - penalidades operacionais;
+  - aceite e recusa de corrida;
+  - criacao e resolucao administrativa de penalidades;
+  - sincronizacao de compliance.
+- O efeito para o app e indireto, mas importante:
+  - menos risco de regressao silenciosa em elegibilidade de corrida;
+  - menos acoplamento entre despacho, agenda e reputacao;
+  - base mais segura para continuar as proximas rotas e correcoes do parceiro.
+- O contrato observado pelo app segue igual nesta rodada.
