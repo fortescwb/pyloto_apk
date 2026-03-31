@@ -503,3 +503,30 @@ O backend `pyloto_atende` moveu o bloco de deslocamento do parceiro para um subf
   - menos risco de quebrar rota ativa e tracking ao mexer em despacho, onboarding ou financeiro;
   - base melhor para seguir limpando a camada REST do parceiro;
   - nenhuma mudanca de contrato HTTP nesta rodada.
+
+## Atualizacao complementar 14 - `2026-03-31`
+
+O backend `pyloto_atende` arrancou de `src/parceiros/service.py` a camada publica inteira do parceiro e espalhou cada fluxo no seu proprio feudo.
+
+- Criados os modulos:
+  - `src/parceiros/conta/acesso_publico.py`
+  - `src/parceiros/agenda/operacao_publica.py`
+  - `src/parceiros/conformidade/corridas_publicas.py`
+  - `src/parceiros/financeiro/credito_corrida.py`
+  - `src/parceiros/financeiro/administracao_publica.py`
+  - `src/parceiros/operacao/acesso_publico.py`
+  - `src/parceiros/operacao/deslocamento_publico.py`
+- Criadas as subpastas:
+  - `src/parceiros/onboarding/administracao/`
+  - `src/parceiros/onboarding/autosservico/`
+- O que saiu de `src/parceiros/service.py`:
+  - cadastro, login e perfil publico;
+  - agenda e disponibilidade do parceiro;
+  - onboarding administrativo e autosservico;
+  - aceite e recusa com reflexo reputacional;
+  - credito de corrida, repasses e mensalidades administrativas;
+  - acesso operacional, despacho, rota ativa e tracking.
+- Efeito pratico para o ecossistema do app:
+  - menos risco de quebrar login, onboarding, disponibilidade, tracking e corrida ativa ao mexer em um fluxo vizinho;
+  - base melhor para continuar a extracao dos helpers internos do parceiro sem reabrir o mesmo sarcofago;
+  - nenhuma mudanca de contrato HTTP nesta rodada.
