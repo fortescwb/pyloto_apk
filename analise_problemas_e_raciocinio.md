@@ -287,3 +287,20 @@ Outra rodada de faxina caiu sobre `src/pedidos/service.py` no backend `pyloto_at
   - menos risco de quebrar serializacao minimizada ao tocar status ou SLA;
   - base melhor para evoluir `corridas/disponiveis`, historico e eventos da corrida.
 - O contrato HTTP observado pelo app continua o mesmo nesta rodada.
+
+## Atualizacao complementar 2 - `2026-03-31`
+
+Mais uma parte de `src/pedidos/service.py` foi arrancada para fora do monolito no backend `pyloto_atende`.
+
+- Criada a pasta:
+  - `src/pedidos/transicoes/`
+- O que saiu do service:
+  - atualizacao generica de status;
+  - aceite atomico da corrida;
+  - ida para aguardando aprovacao;
+  - liberacao do pedido apos pagamento aprovado.
+- Efeito pratico para o app:
+  - menos risco de regressao silenciosa no fluxo que leva uma corrida de disponivel para aceito;
+  - menos acoplamento entre pagamento e estado operacional;
+  - base melhor para continuar as correcoes de aceite, cancelamento e historico.
+- O contrato HTTP observado pelo app continua o mesmo nesta rodada.
