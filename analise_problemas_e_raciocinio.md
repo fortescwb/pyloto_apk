@@ -267,3 +267,23 @@ Nesta rodada nao houve mudanca de contrato HTTP para o app parceiro. O backend `
   - menos acoplamento entre despacho, agenda e reputacao;
   - base mais segura para continuar as proximas rotas e correcoes do parceiro.
 - O contrato observado pelo app segue igual nesta rodada.
+
+## Atualizacao complementar - `2026-03-31`
+
+Outra rodada de faxina caiu sobre `src/pedidos/service.py` no backend `pyloto_atende`.
+
+- Criadas as pastas:
+  - `src/pedidos/parceiro/`
+  - `src/pedidos/operacao/`
+- O que saiu do monolito de pedidos:
+  - payload minimizado para o app do entregador;
+  - auditoria de acesso aos dados do solicitante;
+  - regra de recusa e visibilidade de corridas;
+  - eventos operacionais;
+  - refresh de SLA operacional;
+  - notificacao de mudanca de status.
+- Efeito pratico para o app:
+  - menos acoplamento entre oferta de corrida e infraestrutura de evento;
+  - menos risco de quebrar serializacao minimizada ao tocar status ou SLA;
+  - base melhor para evoluir `corridas/disponiveis`, historico e eventos da corrida.
+- O contrato HTTP observado pelo app continua o mesmo nesta rodada.
