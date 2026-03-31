@@ -429,3 +429,19 @@ O backend `pyloto_atende` moveu tambem a interacao do parceiro com a corrida par
   - menos risco de quebrar oferta, aceite e historico ao mexer em tracking, notificacao ou transicoes;
   - base melhor para evoluir filtros de oferta, regras de recusa e fluxo de corrida ativa sem continuar reabrindo o mesmo tumulo;
   - nenhuma mudanca de contrato HTTP nesta rodada.
+
+## Atualizacao complementar 10 - `2026-03-31`
+
+O backend `pyloto_atende` moveu a jornada operacional da corrida para um subsubfeudo proprio.
+
+- Criada a subpasta:
+  - `src/pedidos/parceiro/jornada/`
+- O que saiu de `src/pedidos/service.py`:
+  - inicio da rota;
+  - confirmacao de coleta;
+  - finalizacao com comprovante;
+  - registro de evento operacional com tracking vinculado.
+- Efeito pratico para o ecossistema do app:
+  - menos risco de quebrar execucao da corrida ao mexer em consulta, oferta ou notificacao;
+  - base melhor para evoluir corrida ativa, tracking e telemetria sem continuar abrindo o mesmo sarcofago;
+  - nenhuma mudanca de contrato HTTP nesta rodada.
