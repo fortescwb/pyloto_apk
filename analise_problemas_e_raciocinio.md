@@ -319,7 +319,29 @@ O backend `pyloto_atende` levou mais um golpe de machado em `src/pedidos/service
   - tracking de rota;
   - precificacao manual.
 - Efeito pratico para o app:
-  - menos risco de regressao acidental ao mexer em criacao e tracking no mesmo arquivo;
-  - base melhor para evoluir mapa, historico e reidratacao da corrida ativa sem cavar mais fundo no lamaçal;
-  - terreno mais seguro para atacar depois as consultas de pedido e o bloco de onboarding do parceiro.
+- menos risco de regressao acidental ao mexer em criacao e tracking no mesmo arquivo;
+- base melhor para evoluir mapa, historico e reidratacao da corrida ativa sem cavar mais fundo no lamaçal;
+- terreno mais seguro para atacar depois as consultas de pedido e o bloco de onboarding do parceiro.
 - O contrato HTTP observado pelo app continua o mesmo nesta rodada.
+
+## Atualizacao complementar 4 - `2026-03-31`
+
+O backend `pyloto_atende` moveu o bloco de onboarding do parceiro para um feudo proprio.
+
+- Criada a pasta:
+  - `src/parceiros/onboarding/`
+- O que saiu de `src/parceiros/service.py`:
+  - consulta de onboarding;
+  - detalhe administrativo do entregador;
+  - revisao e upload administrativo de documentos;
+  - edicao administrativa de cadastro;
+  - registro e resolucao de incidentes operacionais;
+  - envio de evidencia de auditoria de veiculo;
+  - assinatura digital do contrato pelo parceiro.
+- Efeito pratico para o app:
+  - menos risco de quebrar onboarding, assinatura digital e auditoria de veiculo ao tocar outras partes do parceiro;
+  - base melhor para continuar a evolucao de onboarding documental e politicas operacionais;
+  - nenhuma mudanca de contrato HTTP nesta rodada.
+- Observacao importante:
+  - dois testes de integracao que aceitam corridas seedadas em `2026-03-24` continuam falhando por um problema antigo de SLA contra o relogio real em `2026-03-31`;
+  - isso nao aponta regressao do bloco de onboarding refatorado.
