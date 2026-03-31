@@ -364,3 +364,18 @@ O backend `pyloto_atende` perdeu mais um corredor podre de `src/parceiros/servic
   - menos risco de quebrar onboarding administrativo ao tocar regras operacionais do parceiro;
   - base melhor para evoluir upload, revisao documental e bloqueios cadastrais sem cavar no mesmo pantano;
   - nenhuma mudanca de contrato HTTP nesta rodada.
+
+## Atualizacao complementar 6 - `2026-03-31`
+
+O backend `pyloto_atende` moveu as consultas administrativas de onboarding para um subfeudo proprio.
+
+- Criada a subpasta:
+  - `src/parceiros/onboarding/consulta/`
+- O que saiu de `src/parceiros/service.py`:
+  - resumo administrativo do entregador;
+  - status de onboarding com `pending_reason`;
+  - detalhe administrativo expandido do parceiro.
+- Efeito pratico para o ecossistema do app:
+  - menos risco de quebrar leitura administrativa ao mexer em criacao, revisao documental ou autosservico;
+  - base melhor para evoluir onboarding, bloqueios e painel administrativo sem reabrir o mesmo cadaver estrutural;
+  - nenhuma mudanca de contrato HTTP nesta rodada.
