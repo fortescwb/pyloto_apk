@@ -48,7 +48,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.pyloto.entregador.core.calendar.CalendarPermissionChecker
 import com.pyloto.entregador.domain.model.DailyStats
-import com.pyloto.entregador.presentation.home.components.CompactMapSection
 import com.pyloto.entregador.presentation.home.components.DailyGoalCard
 import com.pyloto.entregador.presentation.home.components.DailyStatsSection
 import com.pyloto.entregador.presentation.home.components.EnrichedCorridaCard
@@ -170,19 +169,6 @@ fun NewHomeScreen(
             uiState.isLoading -> {
                 LoadingState(modifier = Modifier.padding(paddingValues))
             }
-
-            uiState.erro != null -> {
-                ErrorState(
-                    error = uiState.erro,
-                    onRetry = {
-                        viewModel.loadCorridas()
-                        viewModel.loadOperationalCapacity()
-                        viewModel.loadAgendaTrabalho()
-                    },
-                    modifier = Modifier.padding(paddingValues)
-                )
-            }
-
             else -> {
                 HomeContent(
                     uiState = uiState,
@@ -258,19 +244,6 @@ private fun HomeContent(
                     onAgendarDia = onAgendarDia,
                     onCancelarAgendamento = onCancelarAgendamento,
                     modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-
-        if (uiState.localizacaoAtual != null) {
-            item(key = "compact_map") {
-                CompactMapSection(
-                    location = uiState.localizacaoAtual,
-                    availableOrders = uiState.corridas.size,
-                    onExpand = {
-                        // TODO: Navegar para mapa fullscreen
-                        // ou abrir modal com mapa expandido
-                    }
                 )
             }
         }

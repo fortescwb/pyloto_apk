@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -46,6 +47,11 @@ import com.pyloto.entregador.presentation.theme.PylotoColors
 import kotlin.math.abs
 import java.text.NumberFormat
 import java.util.Locale
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import com.pyloto.entregador.R
 
 /**
  * Modo Mapa: Google Maps com círculos de raio 250m para cada coleta.
@@ -67,8 +73,12 @@ fun CorridasMapView(
     onCorridaClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val currencyFormatter = remember {
         NumberFormat.getCurrencyInstance(Locale("pt", "BR"))
+    }
+    val motorcycleMarkerIcon = remember(context) {
+        createMotorcycleMarkerIcon(context)
     }
 
     val entregadorPosition = remember(entregadorLat, entregadorLng) {
@@ -116,7 +126,7 @@ fun CorridasMapView(
                 Marker(
                     state = MarkerState(position = entregadorPosition),
                     title = "Sua localização",
-                    icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
+                    icon = motorcycleMarkerIcon
                 )
 
                 // Círculos de raio 250m para cada ponto de coleta
@@ -373,3 +383,13 @@ private val CIRCLE_COLOR_NORMAL = Color(0x3034592A)
 private val CIRCLE_COLOR_PRIORITY = Color(0x30C8962A)
 private val STROKE_COLOR_NORMAL = Color(0xFF34592A)
 private val STROKE_COLOR_PRIORITY = Color(0xFFC8962A)
+
+private fun createMotorcycleMarkerIcon(context: android.content.Context): BitmapDescriptor {
+    val drawable = checkNotNull(ContextCompat.getDrawable(context, R.drawable.ic_motorcycle_marker))
+    val sizePx = 64
+    val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    drawable.setBounds(0, 0, sizePx, sizePx)
+    drawable.draw(canvas)
+    return BitmapDescriptorFactory.fromBitmap(bitmap)
+}

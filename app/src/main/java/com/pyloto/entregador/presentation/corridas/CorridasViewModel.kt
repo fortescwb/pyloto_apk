@@ -61,17 +61,8 @@ class CorridasViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             try {
                 val location = locationRepository.getLastKnownLocation()
-                if (location == null) {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            erro = "Localização indisponível. Permita acesso à localização para ver corridas."
-                        )
-                    }
-                    return@launch
-                }
-                val lat = location.latitude
-                val lng = location.longitude
+                val lat = location?.latitude ?: _uiState.value.entregadorLat
+                val lng = location?.longitude ?: _uiState.value.entregadorLng
                 val corridas = corridaRepository.getCorridasDisponiveis(lat, lng)
                 _uiState.update {
                     it.copy(

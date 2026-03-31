@@ -13,13 +13,12 @@ class ObterCorridasDisponiveisUseCase @Inject constructor(
 ) {
     operator fun invoke(raio: Int = 5000): Flow<List<Corrida>> = flow {
         val location = locationRepository.getLastKnownLocation()
-            ?: throw IllegalStateException(
-                "Localização indisponível. Ative a permissão de localização para ver corridas."
-            )
+        val lat = location?.latitude ?: 0.0
+        val lng = location?.longitude ?: 0.0
 
         val corridas = corridaRepository.getCorridasDisponiveis(
-            lat = location.latitude,
-            lng = location.longitude,
+            lat = lat,
+            lng = lng,
             raio = raio
         )
         emit(corridas)
