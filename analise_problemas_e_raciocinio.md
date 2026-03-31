@@ -379,3 +379,19 @@ O backend `pyloto_atende` moveu as consultas administrativas de onboarding para 
   - menos risco de quebrar leitura administrativa ao mexer em criacao, revisao documental ou autosservico;
   - base melhor para evoluir onboarding, bloqueios e painel administrativo sem reabrir o mesmo cadaver estrutural;
   - nenhuma mudanca de contrato HTTP nesta rodada.
+
+## Atualizacao complementar 7 - `2026-03-31`
+
+O backend `pyloto_atende` abriu um feudo proprio para a conta do parceiro.
+
+- Criada a pasta:
+  - `src/parceiros/conta/`
+- O que saiu de `src/parceiros/service.py`:
+  - auto registro minimo do parceiro;
+  - login/autenticacao;
+  - leitura do proprio perfil;
+  - atualizacao do perfil publico com auditoria.
+- Efeito pratico para o ecossistema do app:
+  - menos risco de quebrar login e perfil ao tocar agenda, onboarding ou bloqueios operacionais;
+  - base melhor para evoluir autenticacao, perfil e contratos do parceiro sem reabrir o mesmo tumulo;
+  - nenhuma mudanca de contrato HTTP nesta rodada.
