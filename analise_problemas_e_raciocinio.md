@@ -2,6 +2,22 @@
 
 Data da analise: `2026-04-01`
 
+## Atualizacao de execucao - backend `pyloto_atende` - `2026-04-01` - rodada de eventos e assinatura
+
+As duas proximas rotas mais logicas atacadas nesta rodada foram:
+
+- `POST /corridas/{id}/eventos`
+  - corrigida para validar `kind` em contrato canonico, em vez de aceitar qualquer ritual mal desenhado;
+  - agora devolve `meta.operational_event` com `phase`, `suggested_next_action`, `next_allowed_actions`, `current_phase` e `current_step`;
+  - a resposta tambem reidrata o detalhe operacional server-driven da corrida;
+  - pedidos de outro parceiro deixam de atravessar o corredor e passam a cair em `404`.
+
+- `POST /entregador/contrato/assinatura/upload-url`
+  - implementada para gerar URL assinada de upload da assinatura do contrato;
+  - valida tipo, tamanho e existencia da evidencia base do contrato antes de liberar o envio;
+  - devolve `upload_id`, `upload_url`, `http_method`, `headers`, `content_type`, `max_size_bytes`, `expires_at` e `reference`;
+  - persiste a intencao de upload em `parceiro_uploads`, com expiracao e referencia final controladas pelo backend.
+
 ## Atualizacao de execucao - backend `pyloto_atende` - `2026-04-01` - rodada de comprovantes
 
 As duas proximas rotas mais logicas atacadas nesta rodada foram:
@@ -93,10 +109,10 @@ O backend atual ja cobre o basico de autenticacao, onboarding, corridas, capacid
 As maiores lacunas encontradas sao estas:
 
 1. O modo mapa continua dependente de `MAPS_API_KEY` embutido no APK e nao existe contrato backend-first para roteirizacao/Google Routes.
-2. Falta completar o fluxo de upload com URL assinada para assinatura digital, auditoria do veiculo e foto de perfil.
+2. Falta completar o fluxo de upload com URL assinada para auditoria do veiculo e foto de perfil.
 3. `POST /auth/logout` existe, mas ainda nao invalida token nem refresh token.
 4. Chat e notificacoes existem apenas em modo basico; faltam leitura, contagem de nao lidas e mecanismo de atualizacao em tempo real.
-5. `POST /corridas/{id}/eventos` continua generico demais para um fluxo que o app ainda tenta inferir localmente.
+5. O detalhe operacional da corrida ainda pode crescer para reduzir o resto da inferencia local do app.
 
 ## Evidencias objetivas encontradas
 
@@ -105,6 +121,8 @@ As maiores lacunas encontradas sao estas:
 - O backend agora usa `lat`, `lng` e `raio` em `/corridas/disponiveis` e devolve ranking/metricas geograficas server-driven.
 - O backend agora expoe `GET /corridas/meus` e `GET /corridas/rota-ativa`.
 - O backend agora expoe `POST /corridas/{id}/comprovante/upload-url` e `POST /corridas/{id}/finalizar` aceita `upload_id`.
+- O backend agora expoe `POST /corridas/{id}/eventos` com contrato canonico e `meta.operational_event`.
+- O backend agora expoe `POST /entregador/contrato/assinatura/upload-url` para onboarding self-service.
 - A chave `MAPS_API_KEY` esta em `gradle.properties` e entra no manifesto via `com.google.android.geo.API_KEY`.
 - `PylotoFirebaseMessagingService.onNewToken()` ainda esta com TODO para enviar o token ao backend.
 - `ChatScreen.kt` e `HistoricoScreen.kt` continuam placeholders.
@@ -126,7 +144,7 @@ As maiores lacunas encontradas sao estas:
 | `POST /corridas/{id}/coletar` | Sim | OK | Fluxo implementado |
 | `POST /corridas/{id}/finalizar` | Sim | OK | Agora aceita `upload_id` ou `foto_comprovante_url` e exige comprovante de entrega |
 | `POST /corridas/{id}/cancelar` | Sim | OK | Fluxo implementado |
-| `POST /corridas/{id}/eventos` | Sim | OK com ressalvas | Generico demais; app ainda infere parte da maquina de estados |
+| `POST /corridas/{id}/eventos` | Sim | OK | Agora valida `kind` em contrato canonico e devolve `meta.operational_event` com fase e proxima acao |
 | `GET /corridas/historico` | Sim | OK | Backend existe, mas a tela ainda e placeholder |
 | `POST /entregador/localizacao` | Sim | OK | Contrato implementado |
 | `POST /entregador/localizacao/batch` | Sim | OK | Contrato implementado |
@@ -138,7 +156,7 @@ As maiores lacunas encontradas sao estas:
 | `POST /entregador/agenda` | Sim | OK | Contrato implementado |
 | `POST /entregador/agenda/{agendaId}/cancelar` | Sim | OK | Contrato implementado |
 | `POST /entregador/status` | Sim | OK | Toggle implementado; auditoria e generica via update de perfil |
-| `POST /entregador/contrato/assinatura-digital` | Sim | OK com ressalvas | So recebe referencia; falta upload self-service |
+| `POST /entregador/contrato/assinatura-digital` | Sim | OK com ressalvas leves | Agora ja pode ser combinado com `upload-url`; falta o app consumir o pipeline completo |
 | `POST /entregador/auditoria-veiculo` | Sim | OK com ressalvas | So recebe referencia; falta upload self-service |
 | `GET /entregador/ganhos` | Sim | OK | Backend entrega ganhos e extrato |
 | `GET /chat/{corridaId}/mensagens` | Sim | OK basico | Sem contrato de tempo real, leitura ou cursor incremental |
@@ -151,7 +169,6 @@ As maiores lacunas encontradas sao estas:
 | Prioridade | Rota sugerida | Motivo |
 |---|---|---|
 | `P0` | `POST /corridas/roteirizacao` ou `POST /corridas/rota-ativa/recalcular` | Calcular sequencia otima de coleta/entrega para multiplos pedidos, com ETA, distancia total, ordem das paradas e proxima acao |
-| `P0` | `POST /entregador/contrato/assinatura/upload-url` | Permitir onboarding sem colar URL/ref manualmente |
 | `P0` | `POST /entregador/auditoria-veiculo/upload-url` | Permitir envio real da foto do veiculo sem depender de referencia externa |
 | `P0` | `POST /entregador/foto/upload-url` | Permitir foto de perfil real; hoje `foto_url` depende de URL pronta |
 | `P0` | `POST /maps/routes` ou rota de dominio equivalente | Consumir Google Routes API pelo backend para rota, ETA, legs e polyline sem jogar a logica de navegação no app |
@@ -169,7 +186,7 @@ As maiores lacunas encontradas sao estas:
 |---|---|---|
 | `GET /corridas/disponiveis` | Ja usa geo real e devolve ranking, mas a ETA ate coleta ainda e heuristica e a distancia total depende da estimativa persistida | Integrar depois com roteirizacao server-side/Google Routes para metricas viarias reais |
 | `GET /corridas/{id}` | Ja devolve estado operacional server-driven, mas ainda nao traz `can_return_home`, `last_location` ou um snapshot mais rico de rota | Evoluir o payload para o modo corrida ativa e reduzir mais ainda a inferencia local do app |
-| `POST /corridas/{id}/eventos` | Contrato muito generico para um fluxo que depende de etapas conhecidas | Validar `kind` com enum canonico, devolver `next_allowed_actions` e documentar claramente cada evento |
+| `POST /corridas/{id}/eventos` | O contrato agora esta canonizado para os eventos operacionais do app, mas ainda pode ganhar novos eventos sem quebrar a trilha atual | Expandir o enum com cuidado e manter a documentacao da maquina operacional alinhada |
 | `POST /corridas/{id}/finalizar` | O backend ja aceita `upload_id`, mas o app ainda nao consome o fluxo novo | Ajustar o app para usar `comprovante/upload-url`, enviar o binario e finalizar com `upload_id` |
 | `PUT /entregador/perfil` | Foto de perfil so funciona se o app ja tiver uma URL valida | Acrescentar fluxo oficial de upload e validacao de tipo/tamanho |
 | `GET /entregador/onboarding-status` | Pode devolver `contrato_download_ref` nao navegavel pelo app, como `gs://...` | Devolver URL assinada, proxy HTTP ou acao explicita de download |
@@ -187,6 +204,7 @@ Estas nao entram como "falta no backend", mas ajudam a separar o que e backlog d
 - `GET /notificacoes`: backend existe, mas nao ha repository/screen usando essa rota.
 - `POST /corridas/{id}/localizacao`: backend existe, mas o app atualmente concentra tracking em `/entregador/localizacao` com `pedido_id`.
 - `POST /corridas/{id}/comprovante/upload-url`: backend existe, mas o app ainda finaliza corrida sem usar pipeline oficial de upload.
+- `POST /entregador/contrato/assinatura/upload-url`: backend existe, mas o app ainda precisa enviar o binario e fechar o onboarding pelo fluxo novo.
 
 ## Tarefas priorizadas para o backend
 
@@ -197,9 +215,9 @@ Estas nao entram como "falta no backend", mas ajudam a separar o que e backlog d
    - Responder com sequencia de paradas, legs, ETA, distancia total, polyline e justificativa da ordem.
 
 2. Criar pipeline oficial de upload.
-   - Assinatura digital do contrato.
    - Foto do veiculo.
    - Foto de perfil.
+   - Assinatura digital do contrato ja esta pronta no backend; falta o app consumir a rota nova.
    - Comprovante de entrega ja esta pronto no backend; falta o app consumir a rota nova.
    - Opcao preferivel: URLs assinadas ou `upload_id` emitido pelo backend.
 
@@ -277,7 +295,7 @@ Se eu tivesse que priorizar so o backend em uma ordem curta, faria assim:
 1. roteirizacao server-side
 2. upload/presign para comprovantes e onboarding
 3. logout com revogacao
-4. fechar eventos operacionais com contrato mais canonico
+4. fechar os uploads restantes de onboarding
 5. chat/notificacoes com leitura e nao lidas
 
 ## Atualizacao complementar 18 - `2026-04-01`
