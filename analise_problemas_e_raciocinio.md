@@ -2,6 +2,24 @@
 
 Data da analise: `2026-04-01`
 
+## Atualizacao de execucao - backend `pyloto_atende` - `2026-04-01` - bloco de roteirizacao server-driven
+
+O backend agora ja expoe o bloco inicial de roteirizacao backend-first que faltava no ecossistema:
+
+- `POST /maps/routes`
+  - implementada com contrato estavel para origem, paradas, legs, polyline e metricas agregadas;
+  - por enquanto usa provider heuristico server-side, sem despejar calculo critico no app;
+  - devolve `ordered_stop_ids`, `stops`, `legs`, `polyline`, `total_distance_m` e `total_duration_min`.
+
+- `POST /corridas/roteirizacao`
+  - implementada como adaptador de corridas ativas do parceiro para o mesmo nucleo de roteirizacao;
+  - aceita `pedido_ids` opcionais e `lat/lng` opcionais para forcar a origem;
+  - devolve `pedido_ids`, `pedido_principal_id`, `phase`, `pedidos`, `total_pedidos`, `legs`, `polyline` e metricas agregadas.
+
+- `POST /corridas/rota-ativa/recalcular`
+  - segue existindo, mas deixou de carregar heuristica paralela;
+  - agora reaproveita o mesmo dominio de roteirizacao, o que reduz o risco de duas verdades apodrecerem em saloes diferentes.
+
 ## Atualizacao de execucao - backend `pyloto_atende` - `2026-04-01` - bloco de notificacoes
 
 O backend fechou um bloco inteiro de cinco rotas no corredor de notificacoes do parceiro:
@@ -189,11 +207,11 @@ O backend atual ja cobre o basico de autenticacao, onboarding, corridas, capacid
 
 As maiores lacunas encontradas sao estas:
 
-1. O modo mapa continua dependente de `MAPS_API_KEY` embutido no APK e ainda falta uma rota backend-first para Google Routes/legs/polylines reais.
+1. O modo mapa continua dependente de `MAPS_API_KEY` embutido no APK e, embora o backend agora tenha `POST /maps/routes` e `POST /corridas/roteirizacao`, ainda falta a camada viaria real para Google Routes/legs/polylines confiaveis.
 2. O pipeline oficial de upload e download privado ja existe no backend, mas o app ainda nao consome de ponta a ponta os portais novos de onboarding, perfil e comprovantes.
 3. `POST /auth/logout` existe, mas ainda nao invalida token nem refresh token.
 4. Chat e notificacoes ainda nao fecharam o ciclo operacional; o chat agora ganhou leitura e nao lidas, e notificacoes fecharam o bloco basico do backend, mas ainda faltam sync incremental do chat e consumo real dessas rotas pelo app.
-5. A roteirizacao server-driven ja ganhou uma preview heuristica, mas ainda falta a camada viaria real para o mapa deixar de improvisar.
+5. A roteirizacao server-driven deixou de ser ausencia e virou contrato real, mas ainda opera em heuristica e nao em provider viario definitivo.
 
 ## Evidencias objetivas encontradas
 
@@ -213,6 +231,8 @@ As maiores lacunas encontradas sao estas:
 - O backend agora expoe `POST /entregador/auditoria-veiculo/upload-url`.
 - O backend agora expoe `POST /entregador/foto/upload-url`.
 - O backend agora expoe `POST /corridas/rota-ativa/recalcular` para preview server-driven da ordem de paradas.
+- O backend agora expoe `POST /maps/routes`.
+- O backend agora expoe `POST /corridas/roteirizacao`.
 - A chave `MAPS_API_KEY` esta em `gradle.properties` e entra no manifesto via `com.google.android.geo.API_KEY`.
 - `PylotoFirebaseMessagingService.onNewToken()` ainda esta com TODO para enviar o token ao backend.
 - `ChatScreen.kt` e `HistoricoScreen.kt` continuam placeholders.
@@ -258,15 +278,13 @@ As maiores lacunas encontradas sao estas:
 
 | Prioridade | Rota sugerida | Motivo |
 |---|---|---|
-| `P0` | `POST /maps/routes` ou rota de dominio equivalente | Consumir Google Routes API pelo backend para rota, ETA, legs e polyline sem jogar a logica de navegação no app |
-| `P1` | `POST /corridas/roteirizacao` | Evoluir a preview heuristica da rota ativa para uma roteirizacao generica e reutilizavel, com suporte a cenarios fora da corrida ativa |
 | `P1` | `GET /chat/{corridaId}/stream` ou alternativa de sync incremental | Atualizacao em tempo real ou quase real do chat |
 
 ## Matriz 3 - rotas existentes, mas com contrato insuficiente para o fluxo real
 
 | Rota | Problema atual | Tarefa de backend |
 |---|---|---|
-| `GET /corridas/disponiveis` | Ja usa geo real e devolve ranking, mas a ETA ate coleta ainda e heuristica e a distancia total depende da estimativa persistida | Integrar depois com roteirizacao server-side/Google Routes para metricas viarias reais |
+| `GET /corridas/disponiveis` | Ja usa geo real e devolve ranking, mas a ETA ate coleta ainda e heuristica e a distancia total depende da estimativa persistida | Integrar depois com `POST /maps/routes` e provider viario real para metricas realmente navegaveis |
 | `GET /corridas/{id}` | Ja devolve estado operacional server-driven, mas ainda nao traz `can_return_home`, `last_location` ou um snapshot mais rico de rota | Evoluir o payload para o modo corrida ativa e reduzir mais ainda a inferencia local do app |
 | `POST /corridas/{id}/eventos` | O contrato agora esta canonizado para os eventos operacionais do app, mas ainda pode ganhar novos eventos sem quebrar a trilha atual | Expandir o enum com cuidado e manter a documentacao da maquina operacional alinhada |
 | `POST /corridas/{id}/finalizar` | O backend ja aceita `upload_id`, mas o app ainda nao consome o fluxo novo | Ajustar o app para usar `comprovante/upload-url`, enviar o binario e finalizar com `upload_id` |
@@ -277,6 +295,8 @@ As maiores lacunas encontradas sao estas:
 | `GET /corridas/historico` | Contrato serve para pagina basica, mas nao para tela com filtros/periodos | Adicionar filtros por data, status, tipo e resumos agregados |
 | `GET/POST /notificacoes` | O backend agora cobre badge, leitura individual e leitura em massa, mas o app ainda nao usa nada disso | Implementar consumo no app para caixa, badge e sincronizacao de leitura |
 | `GET/POST /chat/{corridaId}` | O backend agora cobre leitura e contagem de nao lidas, mas o chat ainda nao tem sync incremental nem stream | Evoluir para cursor incremental, stream ou pull curto sem duplicar logica no app |
+| `POST /maps/routes` | O backend agora ja responde rota backend-first, mas ainda com provider heuristico | Encaixar provider viario real e fazer o app parar de tratar Google como oraculo embutido |
+| `POST /corridas/roteirizacao` | O backend agora ja responde roteirizacao generica das corridas ativas, mas ainda com heuristica | Evoluir para usar o mesmo provider viario real e definir quando o app deve preferir esse portal a `rota-ativa/recalcular` |
 
 ## Rotas que o backend ja possui, mas o app ainda nao aproveita bem
 
@@ -298,15 +318,17 @@ Estas nao entram como "falta no backend", mas ajudam a separar o que e backlog d
 - `POST /entregador/auditoria-veiculo/upload-url`: backend existe, mas o app ainda precisa enviar a imagem e depois registrar a evidencia do incidente.
 - `POST /entregador/foto/upload-url`: backend existe, mas o app ainda precisa usar a referencia retornada na atualizacao de perfil.
 - `POST /corridas/rota-ativa/recalcular`: backend existe, mas o app ainda precisa decidir quando pedir recalc server-driven em vez de ordenar localmente no improviso.
+- `POST /maps/routes`: backend existe, mas o app ainda nao usa o portal backend-first para mapa, ETA ou legs.
+- `POST /corridas/roteirizacao`: backend existe, mas o app ainda nao usa a variante generica para corridas fora do snapshot da rota ativa.
 
 ## Tarefas priorizadas para o backend
 
 ### `P0` - obrigatorio para operacao real
 
 1. Evoluir a roteirizacao server-side.
-   - A preview heuristica ja existe em `POST /corridas/rota-ativa/recalcular`.
-   - Falta criar a camada viaria real em `POST /maps/routes` e, se necessario, uma rota generica de roteirizacao para multiplos cenarios.
-   - O alvo agora e responder com sequencia de paradas, legs, ETA, distancia total, polyline e justificativa da ordem.
+   - O backend agora ja expoe `POST /maps/routes`, `POST /corridas/roteirizacao` e a preview em `POST /corridas/rota-ativa/recalcular`.
+   - Falta trocar a heuristica por provider viario real.
+   - O alvo agora e responder com sequencia de paradas, legs, ETA, distancia total e polyline viaria confiavel.
 
 2. Fechar o consumo do pipeline oficial de upload.
    - O backend ja esta pronto para:
@@ -486,6 +508,22 @@ O backend `pyloto_atende` fechou o bloco inteiro de notificacoes do parceiro.
   - `src/notifications/service.py` virou fachada curta;
   - `src/notifications/base.py`, `src/notifications/consulta.py` e `src/notifications/leitura.py` separaram fundacao, leitura e badge;
   - `src/parceiros/conta/push_token.py` tirou o registro de token FCM do mesmo barril de perfil.
+
+## Atualizacao complementar 23 - `2026-04-01`
+
+O backend `pyloto_atende` abriu o bloco inicial de roteirizacao server-driven do parceiro.
+
+- `POST /maps/routes`
+  - agora devolve rota backend-first com `ordered_stop_ids`, `stops`, `legs`, `polyline`, `total_distance_m` e `total_duration_min`;
+  - o provider ainda e heuristico, mas o contrato ja saiu do colo do app.
+
+- `POST /corridas/roteirizacao`
+  - agora roteiriza corridas ativas do parceiro com `pedido_ids`, `pedido_principal_id`, `phase`, `pedidos` e metricas agregadas;
+  - aceita `pedido_ids` opcionais e `lat/lng` opcionais para forcar a origem.
+
+- Ajuste estrutural que sustentou a rodada:
+  - nasceu `src/roteirizacao/` com `base/`, `heuristica/`, `maps/` e `corridas/`;
+  - `src/corridas_ativas/recalculo/heuristica.py` foi religada ao mesmo dominio, em vez de manter matematica duplicada apodrecendo em paralelo.
 
 ## Atualizacao de execucao - `2026-03-31`
 
