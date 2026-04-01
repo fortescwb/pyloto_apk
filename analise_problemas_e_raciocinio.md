@@ -20,6 +20,10 @@ Rodada implementada em `2026-03-31`:
 - A rodada seguinte continuou a refatoracao estrutural sem alterar contrato HTTP do app.
   - O nucleo financeiro do parceiro foi extraido para `src/parceiros/financeiro/`.
   - Isso isola ganhos, repasses, mensalidades, suspensao financeira e extrato.
+- A rodada mais recente continuou a limpeza estrutural sem mudar contrato HTTP do app.
+  - O eixo temporal saiu de `src/parceiros/service.py` para `src/parceiros/base/tempo.py`.
+  - O financeiro ganhou `src/parceiros/financeiro/estado/`, `src/parceiros/financeiro/consulta/` e `src/parceiros/financeiro/base/plano.py`.
+  - Resumo, extrato, periodo de ganhos e sincronizacao financeira do parceiro deixaram de viver espremidos dentro do `service.py`.
 - `GET /corridas/disponiveis` foi corrigida no backend.
   - A listagem agora aplica `dispatch_check` por item.
   - Corridas ainda bloqueadas para parceiros nao agendados deixam de aparecer antes da liberacao remanescente.
