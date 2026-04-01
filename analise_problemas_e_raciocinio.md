@@ -594,3 +594,16 @@ O backend `pyloto_atende` praticamente esvaziou o resto utilitario de `src/parce
   - menos risco de quebrar login, onboarding, disponibilidade, tracking e acesso operacional ao mexer em uma regra vizinha;
   - base muito melhor para evoluir o backend do entregador sem reabrir a mesma tumba em `service.py`;
   - nenhuma mudanca de contrato HTTP nesta rodada.
+
+## Atualizacao complementar 17 - `2026-04-01`
+
+O backend `pyloto_atende` ganhou grimorios estruturais em `src/parceiros/` e em todas as subpastas desse dominio.
+
+- Cada pasta agora tem `grimorio.md` com:
+  - proposito da pasta;
+  - criterio curto para abrir subpasta;
+  - tree local que deve ser mantida atualizada.
+- Efeito pratico para o ecossistema do app:
+  - menor chance de a estrutura de parceiros voltar a virar amontoado opaco;
+  - onboarding, operacao, financeiro, conta, agenda e conformidade ficaram mais faceis de navegar;
+  - nenhuma mudanca de contrato HTTP nesta rodada.
