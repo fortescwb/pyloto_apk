@@ -2,13 +2,35 @@
 
 Data da analise: `2026-04-01`
 
+## Atualizacao de execucao - backend `pyloto_atende` - `2026-04-01` - provider viario real no backend
+
+O backend agora usa a secret `GOOGLE_MAPS_API_KEY` do deploy para encaixar provider viario real da Google Routes API nestes corredores:
+
+- `POST /maps/routes`
+  - agora tenta provider real primeiro e so recua para heuristica quando a secret faltar ou o provider falhar;
+  - o `source` deixou de mentir e passou a ser `maps_routes`;
+  - o payload continua com `provider`, `ordered_stop_ids`, `stops`, `legs`, `polyline`, `total_distance_m` e `total_duration_min`.
+
+- `POST /corridas/roteirizacao`
+  - herdou o mesmo provider real;
+  - o `source` agora e `partner_orders_route`;
+  - mantem `pedido_ids`, `pedido_principal_id`, `phase`, `pedidos` e `total_pedidos`.
+
+- `POST /corridas/rota-ativa/recalcular`
+  - agora passa pelo mesmo dominio de roteirizacao com provider real quando a secret existe;
+  - o fallback heuristico segue vivo quando o provider nao puder responder.
+
+- `GET /corridas/disponiveis`
+  - passou a usar matriz viaria real para `distancia_ate_coleta_m`, `eta_ate_coleta_min`, `distancia_total_m` e `tempo_total_min` quando a secret existe;
+  - mantem fallback heuristico controlado quando o provider estiver indisponivel.
+
 ## Atualizacao de execucao - backend `pyloto_atende` - `2026-04-01` - bloco de roteirizacao server-driven
 
 O backend agora ja expoe o bloco inicial de roteirizacao backend-first que faltava no ecossistema:
 
 - `POST /maps/routes`
   - implementada com contrato estavel para origem, paradas, legs, polyline e metricas agregadas;
-  - por enquanto usa provider heuristico server-side, sem despejar calculo critico no app;
+  - agora usa provider viario real quando a secret existe, com fallback heuristico quando o provider nao puder responder;
   - devolve `ordered_stop_ids`, `stops`, `legs`, `polyline`, `total_distance_m` e `total_duration_min`.
 
 - `POST /corridas/roteirizacao`
@@ -207,11 +229,11 @@ O backend atual ja cobre o basico de autenticacao, onboarding, corridas, capacid
 
 As maiores lacunas encontradas sao estas:
 
-1. O modo mapa continua dependente de `MAPS_API_KEY` embutido no APK e, embora o backend agora tenha `POST /maps/routes` e `POST /corridas/roteirizacao`, ainda falta a camada viaria real para Google Routes/legs/polylines confiaveis.
+1. O modo mapa continua dependente de `MAPS_API_KEY` embutido no APK, mesmo com o backend agora tendo provider viario real em `POST /maps/routes` e `POST /corridas/roteirizacao`.
 2. O pipeline oficial de upload e download privado ja existe no backend, mas o app ainda nao consome de ponta a ponta os portais novos de onboarding, perfil e comprovantes.
 3. `POST /auth/logout` existe, mas ainda nao invalida token nem refresh token.
 4. Chat e notificacoes ainda nao fecharam o ciclo operacional; o chat agora ganhou leitura e nao lidas, e notificacoes fecharam o bloco basico do backend, mas ainda faltam sync incremental do chat e consumo real dessas rotas pelo app.
-5. A roteirizacao server-driven deixou de ser ausencia e virou contrato real, mas ainda opera em heuristica e nao em provider viario definitivo.
+5. A roteirizacao server-driven deixou de ser ausencia e tambem deixou de ser puramente heuristica: agora usa provider viario real quando a secret existe, com fallback controlado.
 
 ## Evidencias objetivas encontradas
 
@@ -245,7 +267,7 @@ As maiores lacunas encontradas sao estas:
 | `POST /auth/login` | Sim | OK | Contrato alinhado ao app |
 | `POST /auth/refresh` | Sim | OK | Contrato alinhado ao app |
 | `POST /auth/logout` | Sim | OK com ressalvas | Ainda nao invalida token; ha TODO explicito no backend |
-| `GET /corridas/disponiveis` | Sim | OK com ressalvas | Agora usa `lat/lng/raio`, devolve distancia e rank server-driven; ainda falta ETA viaria real e score mais sofisticado |
+| `GET /corridas/disponiveis` | Sim | OK com ressalvas leves | Agora usa `lat/lng/raio` e metricas viarias reais quando a secret existe; o fallback heuristico segue vivo quando o provider estiver indisponivel |
 | `GET /corridas/{id}` | Sim | OK com ressalvas leves | Agora expoe estado operacional server-driven; ainda faltam refinamentos como `can_return_home` e eventual `last_location` |
 | `GET /corridas/{id}/capacidade-check` | Sim | OK | Agora prioriza a razao de bloqueio de despacho quando a restricao real nao e capacidade fisica |
 | `POST /corridas/{id}/aceitar` | Sim | OK | Fluxo de aceite implementado |
@@ -284,7 +306,7 @@ As maiores lacunas encontradas sao estas:
 
 | Rota | Problema atual | Tarefa de backend |
 |---|---|---|
-| `GET /corridas/disponiveis` | Ja usa geo real e devolve ranking, mas a ETA ate coleta ainda e heuristica e a distancia total depende da estimativa persistida | Integrar depois com `POST /maps/routes` e provider viario real para metricas realmente navegaveis |
+| `GET /corridas/disponiveis` | Ja usa provider viario real quando a secret existe, mas ainda pode ganhar observabilidade, diagnostico de fallback e estrategia de cache | Evoluir o corredor para expor melhor o estado do provider e reduzir custo de chamadas repetidas |
 | `GET /corridas/{id}` | Ja devolve estado operacional server-driven, mas ainda nao traz `can_return_home`, `last_location` ou um snapshot mais rico de rota | Evoluir o payload para o modo corrida ativa e reduzir mais ainda a inferencia local do app |
 | `POST /corridas/{id}/eventos` | O contrato agora esta canonizado para os eventos operacionais do app, mas ainda pode ganhar novos eventos sem quebrar a trilha atual | Expandir o enum com cuidado e manter a documentacao da maquina operacional alinhada |
 | `POST /corridas/{id}/finalizar` | O backend ja aceita `upload_id`, mas o app ainda nao consome o fluxo novo | Ajustar o app para usar `comprovante/upload-url`, enviar o binario e finalizar com `upload_id` |
@@ -295,8 +317,8 @@ As maiores lacunas encontradas sao estas:
 | `GET /corridas/historico` | Contrato serve para pagina basica, mas nao para tela com filtros/periodos | Adicionar filtros por data, status, tipo e resumos agregados |
 | `GET/POST /notificacoes` | O backend agora cobre badge, leitura individual e leitura em massa, mas o app ainda nao usa nada disso | Implementar consumo no app para caixa, badge e sincronizacao de leitura |
 | `GET/POST /chat/{corridaId}` | O backend agora cobre leitura e contagem de nao lidas, mas o chat ainda nao tem sync incremental nem stream | Evoluir para cursor incremental, stream ou pull curto sem duplicar logica no app |
-| `POST /maps/routes` | O backend agora ja responde rota backend-first, mas ainda com provider heuristico | Encaixar provider viario real e fazer o app parar de tratar Google como oraculo embutido |
-| `POST /corridas/roteirizacao` | O backend agora ja responde roteirizacao generica das corridas ativas, mas ainda com heuristica | Evoluir para usar o mesmo provider viario real e definir quando o app deve preferir esse portal a `rota-ativa/recalcular` |
+| `POST /maps/routes` | O backend agora ja responde com provider viario real quando a secret existe, mas o app ainda nao usa esse portal como fonte principal do mapa | Migrar o app para o backend-first e tirar calculo sensivel do APK |
+| `POST /corridas/roteirizacao` | O backend agora ja responde com provider viario real quando a secret existe, mas o app ainda nao usa esse portal como fonte principal de ordem de paradas | Definir quando o app deve preferir esse portal a `rota-ativa/recalcular` e parar de ordenar na unha |
 
 ## Rotas que o backend ja possui, mas o app ainda nao aproveita bem
 
@@ -317,18 +339,18 @@ Estas nao entram como "falta no backend", mas ajudam a separar o que e backlog d
 - `GET /entregador/contrato/download-url`: backend existe, mas o app ainda precisa parar de depender de `contrato_download_ref` cru.
 - `POST /entregador/auditoria-veiculo/upload-url`: backend existe, mas o app ainda precisa enviar a imagem e depois registrar a evidencia do incidente.
 - `POST /entregador/foto/upload-url`: backend existe, mas o app ainda precisa usar a referencia retornada na atualizacao de perfil.
-- `POST /corridas/rota-ativa/recalcular`: backend existe, mas o app ainda precisa decidir quando pedir recalc server-driven em vez de ordenar localmente no improviso.
-- `POST /maps/routes`: backend existe, mas o app ainda nao usa o portal backend-first para mapa, ETA ou legs.
-- `POST /corridas/roteirizacao`: backend existe, mas o app ainda nao usa a variante generica para corridas fora do snapshot da rota ativa.
+- `POST /corridas/rota-ativa/recalcular`: backend existe e ja usa provider viario real quando a secret existe, mas o app ainda precisa decidir quando pedir recalc server-driven em vez de ordenar localmente no improviso.
+- `POST /maps/routes`: backend existe e ja usa provider viario real quando a secret existe, mas o app ainda nao usa o portal backend-first para mapa, ETA ou legs.
+- `POST /corridas/roteirizacao`: backend existe e ja usa provider viario real quando a secret existe, mas o app ainda nao usa a variante generica para corridas fora do snapshot da rota ativa.
 
 ## Tarefas priorizadas para o backend
 
 ### `P0` - obrigatorio para operacao real
 
-1. Evoluir a roteirizacao server-side.
-   - O backend agora ja expoe `POST /maps/routes`, `POST /corridas/roteirizacao` e a preview em `POST /corridas/rota-ativa/recalcular`.
-   - Falta trocar a heuristica por provider viario real.
-   - O alvo agora e responder com sequencia de paradas, legs, ETA, distancia total e polyline viaria confiavel.
+1. Fechar a migracao do app para a roteirizacao server-side.
+   - O backend agora ja expoe `POST /maps/routes`, `POST /corridas/roteirizacao` e a preview em `POST /corridas/rota-ativa/recalcular` com provider viario real quando a secret existe.
+   - Falta o app consumir isso como fonte principal.
+   - O alvo agora e tirar calculo sensivel e dependencias de key do APK.
 
 2. Fechar o consumo do pipeline oficial de upload.
    - O backend ja esta pronto para:
@@ -338,9 +360,9 @@ Estas nao entram como "falta no backend", mas ajudam a separar o que e backlog d
      - comprovante de entrega.
    - Falta o app consumir os `upload-url` novos e registrar as referencias finais nas rotas ja existentes.
 
-3. Resolver o problema de mapa/Google no desenho de backend.
-   - Criar rota backend-first para Google Routes API.
-   - Se a exigencia for "nenhuma credencial Google no APK", o desenho atual com Google Maps SDK precisa ser substituido, nao apenas escondido.
+3. Resolver o problema de mapa/Google no desenho do app.
+   - O backend ja oferece o corredor backend-first para Google Routes API.
+   - Se a exigencia for "nenhuma credencial Google no APK", o desenho atual com Google Maps SDK no app precisa ser substituido, nao apenas escondido.
 
 4. Implementar logout com revogacao.
    - Bloquear refresh token reutilizado.
@@ -515,7 +537,7 @@ O backend `pyloto_atende` abriu o bloco inicial de roteirizacao server-driven do
 
 - `POST /maps/routes`
   - agora devolve rota backend-first com `ordered_stop_ids`, `stops`, `legs`, `polyline`, `total_distance_m` e `total_duration_min`;
-  - o provider ainda e heuristico, mas o contrato ja saiu do colo do app.
+  - hoje esse corredor ja usa provider viario real quando a secret existe, com fallback heuristico controlado.
 
 - `POST /corridas/roteirizacao`
   - agora roteiriza corridas ativas do parceiro com `pedido_ids`, `pedido_principal_id`, `phase`, `pedidos` e metricas agregadas;
