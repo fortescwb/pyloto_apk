@@ -28,6 +28,10 @@ Rodada implementada em `2026-03-31`:
   - A agenda operacional ganhou `src/parceiros/agenda/base/` e `src/parceiros/agenda/contexto/`.
   - Janela D+1/D+2, no-show, liberacao remanescente, resposta de agenda e refresh de rollover sairam de `src/parceiros/service.py`.
   - O backend preservou os mesmos fluxos do app e dos testes de agenda enquanto derrubava esse corredor da masmorra.
+- A rodada atual continuou sem alterar contrato HTTP do app.
+  - A conformidade operacional ganhou `src/parceiros/conformidade/base/` e `src/parceiros/conformidade/contexto/`.
+  - Politicas de incidente, thresholds de reputacao, penalidades operacionais e sincronizacao de compliance sairam de `src/parceiros/service.py`.
+  - Os fluxos do app, do despacho e do onboarding administrativo seguiram preservados durante a extracao.
 - `GET /corridas/disponiveis` foi corrigida no backend.
   - A listagem agora aplica `dispatch_check` por item.
   - Corridas ainda bloqueadas para parceiros nao agendados deixam de aparecer antes da liberacao remanescente.
