@@ -2,6 +2,29 @@
 
 Data da analise: `2026-04-01`
 
+## Atualizacao de execucao - backend `pyloto_atende` - `2026-04-01` - bloco de notificacoes
+
+O backend fechou um bloco inteiro de cinco rotas no corredor de notificacoes do parceiro:
+
+- `POST /notificacoes/token`
+  - corrigida para aceitar e persistir contexto do dispositivo;
+  - o backend deixou de ignorar `platform` e agora tambem suporta `device_id`, `app_version` e `push_enabled`.
+
+- `GET /notificacoes`
+  - corrigida para devolver `id` estavel, `lida`, `lida_em`, `unread_count` e `has_unread`;
+  - isso mata a gambiarra de fabricar identificador por indice e melhora o estado da caixa sem pedir oraculo local.
+
+- `GET /notificacoes/unread-count`
+  - implementada para devolver `count` e `has_unread` do parceiro.
+
+- `POST /notificacoes/{id}/read`
+  - implementada para marcar uma notificacao individual como lida;
+  - devolve tambem o estado residual do badge.
+
+- `POST /notificacoes/read-all`
+  - implementada para marcar toda a caixa como lida;
+  - devolve quantas notificacoes foram atualizadas e o estado final do badge.
+
 ## Atualizacao de execucao - backend `pyloto_atende` - `2026-04-01` - rodada de badge e leitura de notificacoes
 
 As duas proximas rotas mais logicas atacadas nesta rodada foram:
@@ -169,7 +192,7 @@ As maiores lacunas encontradas sao estas:
 1. O modo mapa continua dependente de `MAPS_API_KEY` embutido no APK e ainda falta uma rota backend-first para Google Routes/legs/polylines reais.
 2. O pipeline oficial de upload e download privado ja existe no backend, mas o app ainda nao consome de ponta a ponta os portais novos de onboarding, perfil e comprovantes.
 3. `POST /auth/logout` existe, mas ainda nao invalida token nem refresh token.
-4. Chat e notificacoes ainda nao fecharam o ciclo operacional; o chat agora ganhou leitura e nao lidas, e notificacoes ganharam badge e leitura individual, mas ainda faltam sync incremental do chat e `read-all` nas notificacoes.
+4. Chat e notificacoes ainda nao fecharam o ciclo operacional; o chat agora ganhou leitura e nao lidas, e notificacoes fecharam o bloco basico do backend, mas ainda faltam sync incremental do chat e consumo real dessas rotas pelo app.
 5. A roteirizacao server-driven ja ganhou uma preview heuristica, mas ainda falta a camada viaria real para o mapa deixar de improvisar.
 
 ## Evidencias objetivas encontradas
@@ -182,6 +205,7 @@ As maiores lacunas encontradas sao estas:
 - O backend agora expoe `POST /corridas/{id}/eventos` com contrato canonico e `meta.operational_event`.
 - O backend agora expoe `POST /chat/{corridaId}/read`.
 - O backend agora expoe `GET /chat/{corridaId}/unread-count`.
+- O backend agora expoe `POST /notificacoes/read-all`.
 - O backend agora expoe `GET /notificacoes/unread-count`.
 - O backend agora expoe `POST /notificacoes/{id}/read`.
 - O backend agora expoe `POST /entregador/contrato/assinatura/upload-url` para onboarding self-service.
@@ -227,8 +251,8 @@ As maiores lacunas encontradas sao estas:
 | `GET /entregador/ganhos` | Sim | OK | Backend entrega ganhos e extrato |
 | `GET /chat/{corridaId}/mensagens` | Sim | OK com ressalvas | Backend agora cobre leitura e nao lidas em rotas dedicadas; ainda falta sync incremental ou stream |
 | `POST /chat/{corridaId}/mensagens` | Sim | OK basico | Funciona para envio, mas a tela do app ainda nao esta pronta |
-| `POST /notificacoes/token` | Sim no contrato | Backend pronto, app nao usa de verdade | `onNewToken()` do app ainda esta pendente |
-| `GET /notificacoes` | Sim no contrato | OK com ressalvas leves | Agora devolve `id` estavel e `lida`; o app ainda nao usa o corredor |
+| `POST /notificacoes/token` | Sim no contrato | OK com ressalvas leves | Agora aceita `platform`, `device_id`, `app_version` e `push_enabled`; o app ainda nao chama de verdade |
+| `GET /notificacoes` | Sim no contrato | OK com ressalvas leves | Agora devolve `id` estavel, `lida`, `lida_em`, `unread_count` e `has_unread`; o app ainda nao usa o corredor |
 
 ## Matriz 2 - rotas necessarias no backend e hoje ausentes
 
@@ -237,7 +261,6 @@ As maiores lacunas encontradas sao estas:
 | `P0` | `POST /maps/routes` ou rota de dominio equivalente | Consumir Google Routes API pelo backend para rota, ETA, legs e polyline sem jogar a logica de navegação no app |
 | `P1` | `POST /corridas/roteirizacao` | Evoluir a preview heuristica da rota ativa para uma roteirizacao generica e reutilizavel, com suporte a cenarios fora da corrida ativa |
 | `P1` | `GET /chat/{corridaId}/stream` ou alternativa de sync incremental | Atualizacao em tempo real ou quase real do chat |
-| `P1` | `POST /notificacoes/read-all` | Marcar tudo como lido |
 
 ## Matriz 3 - rotas existentes, mas com contrato insuficiente para o fluxo real
 
@@ -250,9 +273,9 @@ As maiores lacunas encontradas sao estas:
 | `PUT /entregador/perfil` | O backend agora ja tem `upload-url`, mas o app ainda nao encadeia o envio da imagem com a atualizacao do perfil | Ajustar o app para usar `POST /entregador/foto/upload-url` e persistir a referencia retornada |
 | `GET /entregador/onboarding-status` | O backend ja cobre o download seguro do contrato, mas o app ainda nao encadeia esse portal no fluxo de onboarding | Ajustar o app para usar `GET /entregador/contrato/download-url` quando houver contrato privado |
 | `POST /auth/logout` | Nao ha revogacao real; backend so responde sucesso | Implementar invalidacao de access/refresh token com Redis ou registry equivalente |
-| `POST /notificacoes/token` | Ainda recebe o token cru e ignora o `platform` que o app ja manda | Passar a receber `device_id`, `platform`, `app_version`, `push_enabled` e suportar multiplos dispositivos |
+| `POST /notificacoes/token` | O backend agora aceita contexto do dispositivo, mas o app ainda nao consome o corredor de notificacoes como produto | Fazer o app enviar o token de verdade em `onNewToken()` e reaproveitar o contexto quando houver rotacao |
 | `GET /corridas/historico` | Contrato serve para pagina basica, mas nao para tela com filtros/periodos | Adicionar filtros por data, status, tipo e resumos agregados |
-| `GET/POST /notificacoes` | O backend agora cobre badge e leitura individual, mas ainda falta acao em massa para esvaziar a caixa sem procissao de requests | Implementar `POST /notificacoes/read-all` |
+| `GET/POST /notificacoes` | O backend agora cobre badge, leitura individual e leitura em massa, mas o app ainda nao usa nada disso | Implementar consumo no app para caixa, badge e sincronizacao de leitura |
 | `GET/POST /chat/{corridaId}` | O backend agora cobre leitura e contagem de nao lidas, mas o chat ainda nao tem sync incremental nem stream | Evoluir para cursor incremental, stream ou pull curto sem duplicar logica no app |
 
 ## Rotas que o backend ja possui, mas o app ainda nao aproveita bem
@@ -263,10 +286,11 @@ Estas nao entram como "falta no backend", mas ajudam a separar o que e backlog d
 - `GET/POST /chat/{corridaId}/mensagens`: backend existe, `ChatRepository` existe, mas `ChatScreen.kt` ainda esta placeholder.
 - `POST /chat/{corridaId}/read`: backend existe, mas o app ainda precisa marcar o chat como lido ao abrir/concluir a conversa.
 - `GET /chat/{corridaId}/unread-count`: backend existe, mas o app ainda precisa usar a contagem em badge ou lista.
-- `POST /notificacoes/token`: backend existe, mas `PylotoFirebaseMessagingService.onNewToken()` ainda nao chama a API.
-- `GET /notificacoes`: backend existe, agora com `id` estavel e `lida`, mas nao ha repository/screen usando essa rota.
+- `POST /notificacoes/token`: backend existe, agora aceita contexto do dispositivo, mas `PylotoFirebaseMessagingService.onNewToken()` ainda nao chama a API.
+- `GET /notificacoes`: backend existe, agora com `id` estavel, `lida`, `lida_em`, `unread_count` e `has_unread`, mas nao ha repository/screen usando essa rota.
 - `GET /notificacoes/unread-count`: backend existe, mas o app ainda nao usa a contagem em badge global.
 - `POST /notificacoes/{id}/read`: backend existe, mas o app ainda nao sincroniza leitura individual.
+- `POST /notificacoes/read-all`: backend existe, mas o app ainda nao sincroniza leitura em massa.
 - `POST /corridas/{id}/localizacao`: backend existe, mas o app atualmente concentra tracking em `/entregador/localizacao` com `pedido_id`.
 - `POST /corridas/{id}/comprovante/upload-url`: backend existe, mas o app ainda finaliza corrida sem usar pipeline oficial de upload.
 - `POST /entregador/contrato/assinatura/upload-url`: backend existe, mas o app ainda precisa enviar o binario e fechar o onboarding pelo fluxo novo.
@@ -314,8 +338,7 @@ Estas nao entram como "falta no backend", mas ajudam a separar o que e backlog d
    - Falta o app efetivamente consumir as rotas novas.
 
 7. Fechar o contrato de notificacoes.
-   - O backend ja cobre contagem de nao lidas e marcacao individual.
-   - Falta `read-all`.
+   - O backend ja cobre registro de token, listagem, badge, leitura individual e leitura em massa.
    - Falta o app consumir esse corredor de ponta a ponta.
 
 8. Fechar o consumo do download seguro de contrato.
@@ -323,7 +346,8 @@ Estas nao entram como "falta no backend", mas ajudam a separar o que e backlog d
    - Falta o app usar esse portal no onboarding e parar de depender de referencia crua.
 
 9. Enriquecer `POST /notificacoes/token`.
-   - Receber contexto do dispositivo e tratar troca/rotacao de tokens.
+   - O backend ja aceita contexto do dispositivo.
+   - Falta o app chamar a rota de verdade e tratar troca/rotacao de tokens.
 
 ### `P2` - qualidade de plataforma e manutencao
 
@@ -438,6 +462,30 @@ O backend `pyloto_atende` agora cobre o minimo decente do corredor de notificaco
   - `src/notifications/service.py` deixou de misturar push, alerta, consulta e leitura;
   - `src/notifications/base.py`, `src/notifications/consulta.py` e `src/notifications/leitura.py` passaram a separar responsabilidade;
   - `src/http/routes/app/notificacoes.py` foi reduzida e o contrato foi movido para `src/http/routes/app/notificacoes_contrato.py`.
+
+## Atualizacao complementar 22 - `2026-04-01`
+
+O backend `pyloto_atende` fechou o bloco inteiro de notificacoes do parceiro.
+
+- `POST /notificacoes/token`
+  - agora aceita `platform`, `device_id`, `app_version` e `push_enabled`, em vez de tratar o token como amuleto jogado no vazio.
+
+- `GET /notificacoes`
+  - agora devolve `id` estavel, `lida`, `lida_em`, `unread_count` e `has_unread`.
+
+- `GET /notificacoes/unread-count`
+  - agora devolve o badge global server-driven.
+
+- `POST /notificacoes/{id}/read`
+  - agora marca leitura individual e devolve o estado residual do badge.
+
+- `POST /notificacoes/read-all`
+  - agora marca toda a caixa como lida e devolve quantas notificacoes foram drenadas.
+
+- Ajuste estrutural que sustentou a rodada:
+  - `src/notifications/service.py` virou fachada curta;
+  - `src/notifications/base.py`, `src/notifications/consulta.py` e `src/notifications/leitura.py` separaram fundacao, leitura e badge;
+  - `src/parceiros/conta/push_token.py` tirou o registro de token FCM do mesmo barril de perfil.
 
 ## Atualizacao de execucao - `2026-03-31`
 
