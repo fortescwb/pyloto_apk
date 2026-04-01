@@ -2,6 +2,20 @@
 
 Data da analise: `2026-04-01`
 
+## Atualizacao de execucao - backend `pyloto_atende` - `2026-04-01` - rodada de uploads de auditoria e foto
+
+As duas proximas rotas mais logicas atacadas nesta rodada foram:
+
+- `POST /entregador/auditoria-veiculo/upload-url`
+  - implementada para gerar URL assinada da foto exigida em incidente de auditoria do veiculo;
+  - valida `incident_id`, tipo, tamanho e se o incidente realmente exige essa evidencia;
+  - persiste a intencao em `parceiro_uploads` com `kind = vehicle_audit_photo`.
+
+- `POST /entregador/foto/upload-url`
+  - implementada para gerar URL assinada da foto de perfil do parceiro;
+  - restringe o upload a imagem e persiste a intencao em `parceiro_uploads` com `kind = profile_photo`;
+  - fecha a lacuna de backend que obrigava o app a depender de URL pronta para `foto_url`.
+
 ## Atualizacao de execucao - backend `pyloto_atende` - `2026-04-01` - rodada de eventos e assinatura
 
 As duas proximas rotas mais logicas atacadas nesta rodada foram:
@@ -109,7 +123,7 @@ O backend atual ja cobre o basico de autenticacao, onboarding, corridas, capacid
 As maiores lacunas encontradas sao estas:
 
 1. O modo mapa continua dependente de `MAPS_API_KEY` embutido no APK e nao existe contrato backend-first para roteirizacao/Google Routes.
-2. Falta completar o fluxo de upload com URL assinada para auditoria do veiculo e foto de perfil.
+2. O pipeline oficial de upload agora existe no backend, mas o app ainda nao consome de ponta a ponta os portais novos de onboarding e perfil.
 3. `POST /auth/logout` existe, mas ainda nao invalida token nem refresh token.
 4. Chat e notificacoes existem apenas em modo basico; faltam leitura, contagem de nao lidas e mecanismo de atualizacao em tempo real.
 5. O detalhe operacional da corrida ainda pode crescer para reduzir o resto da inferencia local do app.
@@ -123,6 +137,8 @@ As maiores lacunas encontradas sao estas:
 - O backend agora expoe `POST /corridas/{id}/comprovante/upload-url` e `POST /corridas/{id}/finalizar` aceita `upload_id`.
 - O backend agora expoe `POST /corridas/{id}/eventos` com contrato canonico e `meta.operational_event`.
 - O backend agora expoe `POST /entregador/contrato/assinatura/upload-url` para onboarding self-service.
+- O backend agora expoe `POST /entregador/auditoria-veiculo/upload-url`.
+- O backend agora expoe `POST /entregador/foto/upload-url`.
 - A chave `MAPS_API_KEY` esta em `gradle.properties` e entra no manifesto via `com.google.android.geo.API_KEY`.
 - `PylotoFirebaseMessagingService.onNewToken()` ainda esta com TODO para enviar o token ao backend.
 - `ChatScreen.kt` e `HistoricoScreen.kt` continuam placeholders.
@@ -149,7 +165,7 @@ As maiores lacunas encontradas sao estas:
 | `POST /entregador/localizacao` | Sim | OK | Contrato implementado |
 | `POST /entregador/localizacao/batch` | Sim | OK | Contrato implementado |
 | `GET /entregador/perfil` | Sim | OK | Contrato implementado |
-| `PUT /entregador/perfil` | Sim | OK com ressalvas | Falta rota de upload para `foto_url` |
+| `PUT /entregador/perfil` | Sim | OK com ressalvas leves | Agora ja pode ser combinado com `POST /entregador/foto/upload-url`; falta o app consumir o pipeline novo |
 | `GET /entregador/onboarding-status` | Sim | OK com ressalvas | Falta download seguro/proxy para referencias de contrato |
 | `GET /entregador/capacidade` | Sim | OK | Bom snapshot agregado, mas sem lista navegavel de pedidos ativos |
 | `GET /entregador/agenda` | Sim | OK | Contrato implementado |
@@ -157,7 +173,7 @@ As maiores lacunas encontradas sao estas:
 | `POST /entregador/agenda/{agendaId}/cancelar` | Sim | OK | Contrato implementado |
 | `POST /entregador/status` | Sim | OK | Toggle implementado; auditoria e generica via update de perfil |
 | `POST /entregador/contrato/assinatura-digital` | Sim | OK com ressalvas leves | Agora ja pode ser combinado com `upload-url`; falta o app consumir o pipeline completo |
-| `POST /entregador/auditoria-veiculo` | Sim | OK com ressalvas | So recebe referencia; falta upload self-service |
+| `POST /entregador/auditoria-veiculo` | Sim | OK com ressalvas leves | Agora ja pode ser combinado com `POST /entregador/auditoria-veiculo/upload-url`; falta o app consumir o fluxo novo |
 | `GET /entregador/ganhos` | Sim | OK | Backend entrega ganhos e extrato |
 | `GET /chat/{corridaId}/mensagens` | Sim | OK basico | Sem contrato de tempo real, leitura ou cursor incremental |
 | `POST /chat/{corridaId}/mensagens` | Sim | OK basico | Funciona para envio, mas a tela do app ainda nao esta pronta |
@@ -169,8 +185,6 @@ As maiores lacunas encontradas sao estas:
 | Prioridade | Rota sugerida | Motivo |
 |---|---|---|
 | `P0` | `POST /corridas/roteirizacao` ou `POST /corridas/rota-ativa/recalcular` | Calcular sequencia otima de coleta/entrega para multiplos pedidos, com ETA, distancia total, ordem das paradas e proxima acao |
-| `P0` | `POST /entregador/auditoria-veiculo/upload-url` | Permitir envio real da foto do veiculo sem depender de referencia externa |
-| `P0` | `POST /entregador/foto/upload-url` | Permitir foto de perfil real; hoje `foto_url` depende de URL pronta |
 | `P0` | `POST /maps/routes` ou rota de dominio equivalente | Consumir Google Routes API pelo backend para rota, ETA, legs e polyline sem jogar a logica de navegação no app |
 | `P1` | `GET /entregador/contrato/download-url` ou `GET /entregador/contrato/download` | Resolver `contrato_download_ref` quando a referencia nao for HTTP publica |
 | `P1` | `POST /chat/{corridaId}/read` | Marcar mensagens como lidas no servidor, nao apenas localmente |
@@ -188,7 +202,7 @@ As maiores lacunas encontradas sao estas:
 | `GET /corridas/{id}` | Ja devolve estado operacional server-driven, mas ainda nao traz `can_return_home`, `last_location` ou um snapshot mais rico de rota | Evoluir o payload para o modo corrida ativa e reduzir mais ainda a inferencia local do app |
 | `POST /corridas/{id}/eventos` | O contrato agora esta canonizado para os eventos operacionais do app, mas ainda pode ganhar novos eventos sem quebrar a trilha atual | Expandir o enum com cuidado e manter a documentacao da maquina operacional alinhada |
 | `POST /corridas/{id}/finalizar` | O backend ja aceita `upload_id`, mas o app ainda nao consome o fluxo novo | Ajustar o app para usar `comprovante/upload-url`, enviar o binario e finalizar com `upload_id` |
-| `PUT /entregador/perfil` | Foto de perfil so funciona se o app ja tiver uma URL valida | Acrescentar fluxo oficial de upload e validacao de tipo/tamanho |
+| `PUT /entregador/perfil` | O backend agora ja tem `upload-url`, mas o app ainda nao encadeia o envio da imagem com a atualizacao do perfil | Ajustar o app para usar `POST /entregador/foto/upload-url` e persistir a referencia retornada |
 | `GET /entregador/onboarding-status` | Pode devolver `contrato_download_ref` nao navegavel pelo app, como `gs://...` | Devolver URL assinada, proxy HTTP ou acao explicita de download |
 | `POST /auth/logout` | Nao ha revogacao real; backend so responde sucesso | Implementar invalidacao de access/refresh token com Redis ou registry equivalente |
 | `POST /notificacoes/token` | So recebe o token cru | Passar a receber `device_id`, `platform`, `app_version`, `push_enabled` e suportar multiplos dispositivos |
@@ -205,6 +219,8 @@ Estas nao entram como "falta no backend", mas ajudam a separar o que e backlog d
 - `POST /corridas/{id}/localizacao`: backend existe, mas o app atualmente concentra tracking em `/entregador/localizacao` com `pedido_id`.
 - `POST /corridas/{id}/comprovante/upload-url`: backend existe, mas o app ainda finaliza corrida sem usar pipeline oficial de upload.
 - `POST /entregador/contrato/assinatura/upload-url`: backend existe, mas o app ainda precisa enviar o binario e fechar o onboarding pelo fluxo novo.
+- `POST /entregador/auditoria-veiculo/upload-url`: backend existe, mas o app ainda precisa enviar a imagem e depois registrar a evidencia do incidente.
+- `POST /entregador/foto/upload-url`: backend existe, mas o app ainda precisa usar a referencia retornada na atualizacao de perfil.
 
 ## Tarefas priorizadas para o backend
 
@@ -214,12 +230,13 @@ Estas nao entram como "falta no backend", mas ajudam a separar o que e backlog d
    - Criar rota de calculo de rota otima para multiplas corridas.
    - Responder com sequencia de paradas, legs, ETA, distancia total, polyline e justificativa da ordem.
 
-2. Criar pipeline oficial de upload.
-   - Foto do veiculo.
-   - Foto de perfil.
-   - Assinatura digital do contrato ja esta pronta no backend; falta o app consumir a rota nova.
-   - Comprovante de entrega ja esta pronto no backend; falta o app consumir a rota nova.
-   - Opcao preferivel: URLs assinadas ou `upload_id` emitido pelo backend.
+2. Fechar o consumo do pipeline oficial de upload.
+   - O backend ja esta pronto para:
+     - assinatura digital do contrato;
+     - foto do veiculo;
+     - foto de perfil;
+     - comprovante de entrega.
+   - Falta o app consumir os `upload-url` novos e registrar as referencias finais nas rotas ja existentes.
 
 3. Resolver o problema de mapa/Google no desenho de backend.
    - Criar rota backend-first para Google Routes API.
@@ -293,9 +310,9 @@ O maior gap hoje nao e "aceitar corrida" ou "transicionar status". Isso ja exist
 Se eu tivesse que priorizar so o backend em uma ordem curta, faria assim:
 
 1. roteirizacao server-side
-2. upload/presign para comprovantes e onboarding
+2. consumo do pipeline de upload e download seguro de ativos privados
 3. logout com revogacao
-4. fechar os uploads restantes de onboarding
+4. download seguro de contrato e ativos privados
 5. chat/notificacoes com leitura e nao lidas
 
 ## Atualizacao complementar 18 - `2026-04-01`
