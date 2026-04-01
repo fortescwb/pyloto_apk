@@ -1,6 +1,25 @@
 # Analise de rotas e backlog de backend para o `pyloto_app-parceiro`
 
-Data da analise: `2026-03-31`
+Data da analise: `2026-04-01`
+
+## Atualizacao de execucao - backend `pyloto_atende` - `2026-04-01`
+
+As duas proximas rotas mais urgentes do app parceiro foram atacadas nesta rodada:
+
+- `GET /corridas/disponiveis`
+  - agora usa `lat`, `lng` e `raio` de verdade;
+  - remove ofertas fora do raio quando ha coordenada de origem;
+  - devolve `distancia_ate_coleta_m`, `distancia_ate_coleta_km`, `eta_ate_coleta_min`, `distancia_total_m`, `tempo_total_min`, `rank_dispatch` e `meta.geo_context`;
+  - pedidos sem coordenada continuam aparecendo como fallback, mas no fim da fila.
+
+- `GET /corridas/{id}`
+  - agora devolve estado operacional server-driven com `current_phase`, `current_step`, `allowed_actions`, `next_action`, `tracking_required`, `proof_of_delivery_required`, `route_session_id`, `route_tracking_active` e `route_status`;
+  - detalhe de corrida de outro parceiro deixa de vazar e passa a cair em `404`.
+
+Tambem houve uma correcao estrutural acoplada a isso:
+
+- os controles operacionais canonicos da corrida sairam de `src/corridas_ativas/controls.py` para `src/pedidos/orquestracao/estado/controles_operacionais.py`;
+- isso matou o risco de import circular ao reaproveitar o mesmo estado operacional no detalhe da corrida.
 
 ## Atualizacao de execucao - backend `pyloto_atende`
 
@@ -59,20 +78,18 @@ O backend atual ja cobre o basico de autenticacao, onboarding, corridas, capacid
 
 As maiores lacunas encontradas sao estas:
 
-1. Falta uma rota para listar corridas aceitas/coletadas/em entrega do parceiro e reidratar a rota ativa apos reinicio do app.
-2. `GET /corridas/disponiveis` recebe `lat`, `lng` e `raio`, mas hoje nao usa esses parametros para filtrar nem ordenar as ofertas.
-3. O modo mapa continua dependente de `MAPS_API_KEY` embutido no APK e nao existe contrato backend-first para roteirizacao/Google Routes.
-4. Falta um fluxo de upload ou URL assinada para comprovante de entrega, assinatura digital, auditoria do veiculo e foto de perfil.
-5. `POST /auth/logout` existe, mas ainda nao invalida token nem refresh token.
-6. Chat e notificacoes existem apenas em modo basico; faltam leitura, contagem de nao lidas e mecanismo de atualizacao em tempo real.
-7. O `README` do `pyloto_atende` ainda promete `GET /corridas/meus`, mas essa rota nao esta exposta no FastAPI atual.
+1. O modo mapa continua dependente de `MAPS_API_KEY` embutido no APK e nao existe contrato backend-first para roteirizacao/Google Routes.
+2. Falta um fluxo de upload ou URL assinada para comprovante de entrega, assinatura digital, auditoria do veiculo e foto de perfil.
+3. `POST /auth/logout` existe, mas ainda nao invalida token nem refresh token.
+4. Chat e notificacoes existem apenas em modo basico; faltam leitura, contagem de nao lidas e mecanismo de atualizacao em tempo real.
+5. `POST /corridas/{id}/eventos` continua generico demais para um fluxo que o app ainda tenta inferir localmente.
 
 ## Evidencias objetivas encontradas
 
 - O contrato atual do app esta centralizado em `ApiService.kt`.
 - O app calcula distancia ate a coleta e ordena a lista localmente em `CorridasUiModels.kt`.
-- O backend recebe `lat`, `lng` e `raio` em `/corridas/disponiveis`, mas `list_disponiveis()` nao usa esses parametros para filtro ou ranking.
-- O `README` do `pyloto_atende` ainda documenta `GET /corridas/meus`.
+- O backend agora usa `lat`, `lng` e `raio` em `/corridas/disponiveis` e devolve ranking/metricas geograficas server-driven.
+- O backend agora expoe `GET /corridas/meus` e `GET /corridas/rota-ativa`.
 - A chave `MAPS_API_KEY` esta em `gradle.properties` e entra no manifesto via `com.google.android.geo.API_KEY`.
 - `PylotoFirebaseMessagingService.onNewToken()` ainda esta com TODO para enviar o token ao backend.
 - `ChatScreen.kt` e `HistoricoScreen.kt` continuam placeholders.
@@ -85,8 +102,8 @@ As maiores lacunas encontradas sao estas:
 | `POST /auth/login` | Sim | OK | Contrato alinhado ao app |
 | `POST /auth/refresh` | Sim | OK | Contrato alinhado ao app |
 | `POST /auth/logout` | Sim | OK com ressalvas | Ainda nao invalida token; ha TODO explicito no backend |
-| `GET /corridas/disponiveis` | Sim | OK com ressalvas graves | `dispatch_access` por item e filtro de liberacao remanescente foram corrigidos, mas o backend ainda nao usa `lat/lng/raio` para filtro/ranking geoespacial |
-| `GET /corridas/{id}` | Sim | OK com ressalvas | Falta expor estado operacional server-driven para reduzir logica no app |
+| `GET /corridas/disponiveis` | Sim | OK com ressalvas | Agora usa `lat/lng/raio`, devolve distancia e rank server-driven; ainda falta ETA viaria real e score mais sofisticado |
+| `GET /corridas/{id}` | Sim | OK com ressalvas leves | Agora expoe estado operacional server-driven; ainda faltam refinamentos como `can_return_home` e eventual `last_location` |
 | `GET /corridas/{id}/capacidade-check` | Sim | OK | Agora prioriza a razao de bloqueio de despacho quando a restricao real nao e capacidade fisica |
 | `POST /corridas/{id}/aceitar` | Sim | OK | Fluxo de aceite implementado |
 | `POST /corridas/{id}/recusar` | Sim | OK | Fluxo implementado, com categorias e reputacao |
@@ -138,8 +155,8 @@ As maiores lacunas encontradas sao estas:
 
 | Rota | Problema atual | Tarefa de backend |
 |---|---|---|
-| `GET /corridas/disponiveis` | Ja aplica `dispatch_access` por item e bucket remanescente, mas ainda nao usa `lat/lng/raio`; tambem nao devolve `distancia_ate_coleta`, `eta_ate_coleta` ou ranking server-driven | Fazer filtro geoespacial real, ordenar por distancia/score de despacho e devolver payload pronto para UI |
-| `GET /corridas/{id}` | O app ainda infere `currentStep` localmente a partir de `status` | Devolver `current_step`, `current_phase`, `allowed_actions`, `route_session_id`, `tracking_required`, `proof_of_delivery_required` |
+| `GET /corridas/disponiveis` | Ja usa geo real e devolve ranking, mas a ETA ate coleta ainda e heuristica e a distancia total depende da estimativa persistida | Integrar depois com roteirizacao server-side/Google Routes para metricas viarias reais |
+| `GET /corridas/{id}` | Ja devolve estado operacional server-driven, mas ainda nao traz `can_return_home`, `last_location` ou um snapshot mais rico de rota | Evoluir o payload para o modo corrida ativa e reduzir mais ainda a inferencia local do app |
 | `POST /corridas/{id}/eventos` | Contrato muito generico para um fluxo que depende de etapas conhecidas | Validar `kind` com enum canonico, devolver `next_allowed_actions` e documentar claramente cada evento |
 | `POST /corridas/{id}/finalizar` | Backend aceita so URL/ref de comprovante; nao existe upload guiado | Integrar com fluxo de upload seguro e aceitar `upload_id` ou referencia emitida pelo proprio backend |
 | `PUT /entregador/perfil` | Foto de perfil so funciona se o app ja tiver uma URL valida | Acrescentar fluxo oficial de upload e validacao de tipo/tamanho |
@@ -162,59 +179,47 @@ Estas nao entram como "falta no backend", mas ajudam a separar o que e backlog d
 
 ### `P0` - obrigatorio para operacao real
 
-1. Implementar `GET /corridas/meus` ou `GET /corridas/ativas`.
-   - Deve devolver corridas em progresso do parceiro.
-   - Deve incluir `route_session_id`, `fase`, `pedido_principal_id`, `pedido_ids`, `route_started_at`, `next_action` e deadlines.
-   - Deve ser a rota usada para reidratar sessao apos restart do app.
-
-2. Completar `GET /corridas/disponiveis`.
-   - O backend ja aplica `dispatch_access` por item e respeita a liberacao remanescente.
-   - Ainda falta usar `lat`, `lng` e `raio`.
-   - Ainda falta ordenar por distancia ate a coleta e devolver `distancia_ate_coleta_m`, `eta_ate_coleta_min`, `distancia_total_m`, `tempo_total_min` e score/rank final.
-
-3. Implementar roteirizacao server-side.
+1. Implementar roteirizacao server-side.
    - Criar rota de calculo de rota otima para multiplas corridas.
    - Responder com sequencia de paradas, legs, ETA, distancia total, polyline e justificativa da ordem.
 
-4. Criar pipeline oficial de upload.
+2. Criar pipeline oficial de upload.
    - Comprovante de entrega.
    - Assinatura digital do contrato.
    - Foto do veiculo.
    - Foto de perfil.
    - Opcao preferivel: URLs assinadas ou `upload_id` emitido pelo backend.
 
-5. Resolver o problema de mapa/Google no desenho de backend.
+3. Resolver o problema de mapa/Google no desenho de backend.
    - Criar rota backend-first para Google Routes API.
    - Se a exigencia for "nenhuma credencial Google no APK", o desenho atual com Google Maps SDK precisa ser substituido, nao apenas escondido.
 
-6. Implementar logout com revogacao.
+4. Implementar logout com revogacao.
    - Bloquear refresh token reutilizado.
    - Invalidar access token conforme politica definida.
    - Registrar logout por dispositivo/sessao.
 
 ### `P1` - necessario para maturidade operacional
 
-7. Expor o estado operacional da corrida no backend.
-   - `current_step`
-   - `allowed_actions`
-   - `tracking_required`
-   - `proof_of_delivery_required`
+5. Evoluir o detalhe operacional da corrida.
    - `can_return_home`
+   - `last_location`
+   - `route_snapshot` parcial para a tela ativa
 
-8. Fechar o contrato de chat.
+6. Fechar o contrato de chat.
    - Marcar como lida.
    - Contar nao lidas.
    - Sync incremental ou stream.
 
-9. Fechar o contrato de notificacoes.
+7. Fechar o contrato de notificacoes.
    - Contagem de nao lidas.
    - Marcar individualmente.
    - Marcar todas.
 
-10. Resolver download de contrato no onboarding.
+8. Resolver download de contrato no onboarding.
    - Nao depender de `gs://...` ou referencia interna nao navegavel.
 
-11. Enriquecer `POST /notificacoes/token`.
+9. Enriquecer `POST /notificacoes/token`.
    - Receber contexto do dispositivo e tratar troca/rotacao de tokens.
 
 ### `P2` - qualidade de plataforma e manutencao
@@ -258,11 +263,28 @@ O maior gap hoje nao e "aceitar corrida" ou "transicionar status". Isso ja exist
 
 Se eu tivesse que priorizar so o backend em uma ordem curta, faria assim:
 
-1. `GET /corridas/meus` + `GET /corridas/rota-ativa`
-2. completar `GET /corridas/disponiveis` com geo de verdade
-3. roteirizacao server-side
-4. upload/presign para comprovantes e onboarding
-5. logout com revogacao
+1. roteirizacao server-side
+2. upload/presign para comprovantes e onboarding
+3. logout com revogacao
+4. fechar eventos operacionais com contrato mais canonico
+5. chat/notificacoes com leitura e nao lidas
+
+## Atualizacao complementar 18 - `2026-04-01`
+
+O backend `pyloto_atende` fechou duas lacunas que ainda obrigavam o app parceiro a operar no improviso.
+
+- `GET /corridas/disponiveis`
+  - ganhou filtro geoespacial real por `lat/lng/raio`;
+  - passou a devolver `distancia_ate_coleta_m`, `distancia_ate_coleta_km`, `eta_ate_coleta_min`, `distancia_total_m`, `tempo_total_min` e `rank_dispatch`;
+  - passou a expor `meta.geo_context` para o app saber com qual raio a vitrine foi montada.
+
+- `GET /corridas/{id}`
+  - agora devolve `current_phase`, `current_step`, `allowed_actions`, `next_action`, `tracking_required`, `proof_of_delivery_required`, `route_session_id`, `route_tracking_active` e `route_status`;
+  - tambem fecha o vazamento de detalhe de corrida de outro parceiro, respondendo `404`.
+
+- Ajuste estrutural que sustentou a rodada:
+  - `src/pedidos/orquestracao/estado/controles_operacionais.py` virou a fonte canonica do estado operacional da corrida;
+  - `src/corridas_ativas/controls.py` ficou so como adapter de compatibilidade.
 
 ## Atualizacao de execucao - `2026-03-31`
 
