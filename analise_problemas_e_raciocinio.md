@@ -24,6 +24,10 @@ Rodada implementada em `2026-03-31`:
   - O eixo temporal saiu de `src/parceiros/service.py` para `src/parceiros/base/tempo.py`.
   - O financeiro ganhou `src/parceiros/financeiro/estado/`, `src/parceiros/financeiro/consulta/` e `src/parceiros/financeiro/base/plano.py`.
   - Resumo, extrato, periodo de ganhos e sincronizacao financeira do parceiro deixaram de viver espremidos dentro do `service.py`.
+- A rodada atual seguiu sem alterar contrato HTTP do app.
+  - A agenda operacional ganhou `src/parceiros/agenda/base/` e `src/parceiros/agenda/contexto/`.
+  - Janela D+1/D+2, no-show, liberacao remanescente, resposta de agenda e refresh de rollover sairam de `src/parceiros/service.py`.
+  - O backend preservou os mesmos fluxos do app e dos testes de agenda enquanto derrubava esse corredor da masmorra.
 - `GET /corridas/disponiveis` foi corrigida no backend.
   - A listagem agora aplica `dispatch_check` por item.
   - Corridas ainda bloqueadas para parceiros nao agendados deixam de aparecer antes da liberacao remanescente.
