@@ -2,6 +2,20 @@
 
 Data da analise: `2026-04-01`
 
+## Atualizacao de execucao - backend `pyloto_atende` - `2026-04-01` - rodada de leitura e nao lidas do chat
+
+As duas proximas rotas mais logicas atacadas nesta rodada foram:
+
+- `POST /chat/{corridaId}/read`
+  - implementada para marcar como lidas as mensagens inbound do contato associado a corrida;
+  - persiste `partner_read_at`, `partner_read_by` e `partner_read_source`, sem confundir leitura do app com receipt da Meta;
+  - devolve `read_count`, `read_at`, `unread_count` residual e `has_unread`.
+
+- `GET /chat/{corridaId}/unread-count`
+  - implementada para contar quantas mensagens inbound daquele contato ainda nao foram abertas pelo parceiro;
+  - devolve `corrida_id`, `count` e `has_unread`;
+  - fecha o minimo decente de badge server-driven para o corredor do chat.
+
 ## Atualizacao de execucao - backend `pyloto_atende` - `2026-04-01` - rodada de download seguro e recalc da rota ativa
 
 As duas proximas rotas mais logicas atacadas nesta rodada foram:
@@ -141,7 +155,7 @@ As maiores lacunas encontradas sao estas:
 1. O modo mapa continua dependente de `MAPS_API_KEY` embutido no APK e ainda falta uma rota backend-first para Google Routes/legs/polylines reais.
 2. O pipeline oficial de upload e download privado ja existe no backend, mas o app ainda nao consome de ponta a ponta os portais novos de onboarding, perfil e comprovantes.
 3. `POST /auth/logout` existe, mas ainda nao invalida token nem refresh token.
-4. Chat e notificacoes existem apenas em modo basico; faltam leitura, contagem de nao lidas e mecanismo de atualizacao em tempo real.
+4. Chat e notificacoes ainda nao fecharam o ciclo operacional; o chat agora ganhou leitura e nao lidas, mas ainda falta sync incremental/tempo real, e notificacoes seguem sem badge e marcacao de leitura.
 5. A roteirizacao server-driven ja ganhou uma preview heuristica, mas ainda falta a camada viaria real para o mapa deixar de improvisar.
 
 ## Evidencias objetivas encontradas
@@ -152,6 +166,8 @@ As maiores lacunas encontradas sao estas:
 - O backend agora expoe `GET /corridas/meus` e `GET /corridas/rota-ativa`.
 - O backend agora expoe `POST /corridas/{id}/comprovante/upload-url` e `POST /corridas/{id}/finalizar` aceita `upload_id`.
 - O backend agora expoe `POST /corridas/{id}/eventos` com contrato canonico e `meta.operational_event`.
+- O backend agora expoe `POST /chat/{corridaId}/read`.
+- O backend agora expoe `GET /chat/{corridaId}/unread-count`.
 - O backend agora expoe `POST /entregador/contrato/assinatura/upload-url` para onboarding self-service.
 - O backend agora expoe `GET /entregador/contrato/download-url` para resolver contrato privado com URL navegavel.
 - O backend agora expoe `POST /entregador/auditoria-veiculo/upload-url`.
@@ -193,7 +209,7 @@ As maiores lacunas encontradas sao estas:
 | `POST /entregador/contrato/assinatura-digital` | Sim | OK com ressalvas leves | Agora ja pode ser combinado com `upload-url`; falta o app consumir o pipeline completo |
 | `POST /entregador/auditoria-veiculo` | Sim | OK com ressalvas leves | Agora ja pode ser combinado com `POST /entregador/auditoria-veiculo/upload-url`; falta o app consumir o fluxo novo |
 | `GET /entregador/ganhos` | Sim | OK | Backend entrega ganhos e extrato |
-| `GET /chat/{corridaId}/mensagens` | Sim | OK basico | Sem contrato de tempo real, leitura ou cursor incremental |
+| `GET /chat/{corridaId}/mensagens` | Sim | OK com ressalvas | Backend agora cobre leitura e nao lidas em rotas dedicadas; ainda falta sync incremental ou stream |
 | `POST /chat/{corridaId}/mensagens` | Sim | OK basico | Funciona para envio, mas a tela do app ainda nao esta pronta |
 | `POST /notificacoes/token` | Sim no contrato | Backend pronto, app nao usa de verdade | `onNewToken()` do app ainda esta pendente |
 | `GET /notificacoes` | Sim no contrato | Backend pronto, app nao usa de verdade | Nao ha tela/fluxo implementado no app |
@@ -204,8 +220,6 @@ As maiores lacunas encontradas sao estas:
 |---|---|---|
 | `P0` | `POST /maps/routes` ou rota de dominio equivalente | Consumir Google Routes API pelo backend para rota, ETA, legs e polyline sem jogar a logica de navegação no app |
 | `P1` | `POST /corridas/roteirizacao` | Evoluir a preview heuristica da rota ativa para uma roteirizacao generica e reutilizavel, com suporte a cenarios fora da corrida ativa |
-| `P1` | `POST /chat/{corridaId}/read` | Marcar mensagens como lidas no servidor, nao apenas localmente |
-| `P1` | `GET /chat/{corridaId}/unread-count` | Badge e contagem de nao lidas server-driven |
 | `P1` | `GET /chat/{corridaId}/stream` ou alternativa de sync incremental | Atualizacao em tempo real ou quase real do chat |
 | `P1` | `GET /notificacoes/unread-count` | Badge global de notificacoes |
 | `P1` | `POST /notificacoes/{id}/read` | Marcar notificacao individual como lida |
@@ -224,6 +238,7 @@ As maiores lacunas encontradas sao estas:
 | `POST /auth/logout` | Nao ha revogacao real; backend so responde sucesso | Implementar invalidacao de access/refresh token com Redis ou registry equivalente |
 | `POST /notificacoes/token` | So recebe o token cru | Passar a receber `device_id`, `platform`, `app_version`, `push_enabled` e suportar multiplos dispositivos |
 | `GET /corridas/historico` | Contrato serve para pagina basica, mas nao para tela com filtros/periodos | Adicionar filtros por data, status, tipo e resumos agregados |
+| `GET/POST /chat/{corridaId}` | O backend agora cobre leitura e contagem de nao lidas, mas o chat ainda nao tem sync incremental nem stream | Evoluir para cursor incremental, stream ou pull curto sem duplicar logica no app |
 
 ## Rotas que o backend ja possui, mas o app ainda nao aproveita bem
 
@@ -231,6 +246,8 @@ Estas nao entram como "falta no backend", mas ajudam a separar o que e backlog d
 
 - `GET /corridas/historico`: backend existe, mas `HistoricoScreen.kt` ainda esta placeholder.
 - `GET/POST /chat/{corridaId}/mensagens`: backend existe, `ChatRepository` existe, mas `ChatScreen.kt` ainda esta placeholder.
+- `POST /chat/{corridaId}/read`: backend existe, mas o app ainda precisa marcar o chat como lido ao abrir/concluir a conversa.
+- `GET /chat/{corridaId}/unread-count`: backend existe, mas o app ainda precisa usar a contagem em badge ou lista.
 - `POST /notificacoes/token`: backend existe, mas `PylotoFirebaseMessagingService.onNewToken()` ainda nao chama a API.
 - `GET /notificacoes`: backend existe, mas nao ha repository/screen usando essa rota.
 - `POST /corridas/{id}/localizacao`: backend existe, mas o app atualmente concentra tracking em `/entregador/localizacao` com `pedido_id`.
@@ -275,9 +292,9 @@ Estas nao entram como "falta no backend", mas ajudam a separar o que e backlog d
    - `route_snapshot` parcial para a tela ativa
 
 6. Fechar o contrato de chat.
-   - Marcar como lida.
-   - Contar nao lidas.
-   - Sync incremental ou stream.
+   - O backend ja cobre marcar como lida e contar nao lidas.
+   - Falta sync incremental ou stream.
+   - Falta o app efetivamente consumir as rotas novas.
 
 7. Fechar o contrato de notificacoes.
    - Contagem de nao lidas.
@@ -371,6 +388,22 @@ O backend `pyloto_atende` fechou mais duas lacunas que ainda deixavam o onboardi
   - `src/corridas_ativas/snapshot.py` passou a concentrar a montagem do snapshot persistido;
   - `src/corridas_ativas/service.py` voltou a ser so fachada curta;
   - `src/parceiros/onboarding/autosservico/downloads/` virou o corredor proprio de downloads privados.
+
+## Atualizacao complementar 20 - `2026-04-01`
+
+O backend `pyloto_atende` fechou o pacote minimo de leitura server-driven do chat do parceiro.
+
+- `POST /chat/{corridaId}/read`
+  - agora marca como lidas as mensagens inbound do contato, persistindo `partner_read_at`, `partner_read_by` e `partner_read_source`;
+  - devolve `read_count`, `read_at`, `unread_count` e `has_unread`.
+
+- `GET /chat/{corridaId}/unread-count`
+  - agora devolve `count` e `has_unread` para o app montar badge ou resumo sem inventar estado local.
+
+- Ajuste estrutural que sustentou a rodada:
+  - `src/http/routes/app/chat.py` foi enxugada;
+  - `src/http/routes/app/chat_contrato.py` e `src/http/routes/app/chat_contexto.py` ficaram responsaveis por contrato e contexto;
+  - `src/mensagens/repository.py` virou fachada curta, enquanto consulta, persistencia e leitura foram separadas em modulos proprios.
 
 ## Atualizacao de execucao - `2026-03-31`
 
