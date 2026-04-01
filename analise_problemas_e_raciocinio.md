@@ -566,3 +566,31 @@ O backend `pyloto_atende` domesticou a estrutura das pastas `financeiro`, `onboa
   - menos risco de quebrar onboarding, despacho, disponibilidade e tracking ao mexer em arquivos sem relacao direta;
   - base muito melhor para continuar a queda de `src/parceiros/service.py` com imports limpos e dominios visiveis;
   - nenhuma mudanca de contrato HTTP nesta rodada.
+
+## Atualizacao complementar 16 - `2026-04-01`
+
+O backend `pyloto_atende` praticamente esvaziou o resto utilitario de `src/parceiros/service.py` e distribuiu o que sobrava em feudos contextuais menores.
+
+- Criados os modulos:
+  - `src/parceiros/base/politicas.py`
+  - `src/parceiros/base/auditoria.py`
+  - `src/parceiros/conta/registro_base.py`
+  - `src/parceiros/onboarding/cadastro/consentimento_dados.py`
+  - `src/parceiros/onboarding/documentos/contexto_documental.py`
+  - `src/parceiros/onboarding/consulta/contexto_admin.py`
+  - `src/parceiros/onboarding/administracao/parametros.py`
+- Criadas as subpastas:
+  - `src/parceiros/operacao/compliance/base/`
+  - `src/parceiros/operacao/compliance/contexto/`
+  - `src/parceiros/operacao/localizacao/contexto/`
+- O que saiu de `src/parceiros/service.py`:
+  - politicas de retencao e tracking;
+  - auditoria do parceiro;
+  - unicidade de cadastro e hash de senha;
+  - consentimento de dados e construcao documental;
+  - resumo, status e detalhe administrativo do onboarding;
+  - contexto de localizacao e elegibilidade operacional.
+- Efeito pratico para o ecossistema do app:
+  - menos risco de quebrar login, onboarding, disponibilidade, tracking e acesso operacional ao mexer em uma regra vizinha;
+  - base muito melhor para evoluir o backend do entregador sem reabrir a mesma tumba em `service.py`;
+  - nenhuma mudanca de contrato HTTP nesta rodada.
