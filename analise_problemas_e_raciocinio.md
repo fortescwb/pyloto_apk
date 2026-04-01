@@ -2,6 +2,22 @@
 
 Data da analise: `2026-04-01`
 
+## Atualizacao de execucao - backend `pyloto_atende` - `2026-04-01` - rodada de download seguro e recalc da rota ativa
+
+As duas proximas rotas mais logicas atacadas nesta rodada foram:
+
+- `GET /entregador/contrato/download-url`
+  - implementada para resolver `contrato_download_ref` sem despejar `gs://...` cru no colo do app;
+  - preserva referencias HTTP publicas quando elas ja existem;
+  - converte referencias privadas do GCS em URL assinada temporaria de download;
+  - devolve `download_url`, `reference`, `expires_at`, `filename`, `contract_version` e `source`.
+
+- `POST /corridas/rota-ativa/recalcular`
+  - implementada para gerar uma preview server-driven da ordem de coleta e entrega da rota ativa;
+  - aceita `lat` e `lng` opcionais para o app forcar uma origem mais atual;
+  - devolve `source = recalculated_preview`, `origin`, `stops`, `pedido_ids`, `pedido_principal_id`, `total_distance_m`, `total_duration_min` e `recalculated_at`;
+  - reidrata tambem os `pedidos` ja ordenados, para o app parar de remendar a fila na unha.
+
 ## Atualizacao de execucao - backend `pyloto_atende` - `2026-04-01` - rodada de uploads de auditoria e foto
 
 As duas proximas rotas mais logicas atacadas nesta rodada foram:
@@ -122,11 +138,11 @@ O backend atual ja cobre o basico de autenticacao, onboarding, corridas, capacid
 
 As maiores lacunas encontradas sao estas:
 
-1. O modo mapa continua dependente de `MAPS_API_KEY` embutido no APK e nao existe contrato backend-first para roteirizacao/Google Routes.
-2. O pipeline oficial de upload agora existe no backend, mas o app ainda nao consome de ponta a ponta os portais novos de onboarding e perfil.
+1. O modo mapa continua dependente de `MAPS_API_KEY` embutido no APK e ainda falta uma rota backend-first para Google Routes/legs/polylines reais.
+2. O pipeline oficial de upload e download privado ja existe no backend, mas o app ainda nao consome de ponta a ponta os portais novos de onboarding, perfil e comprovantes.
 3. `POST /auth/logout` existe, mas ainda nao invalida token nem refresh token.
 4. Chat e notificacoes existem apenas em modo basico; faltam leitura, contagem de nao lidas e mecanismo de atualizacao em tempo real.
-5. O detalhe operacional da corrida ainda pode crescer para reduzir o resto da inferencia local do app.
+5. A roteirizacao server-driven ja ganhou uma preview heuristica, mas ainda falta a camada viaria real para o mapa deixar de improvisar.
 
 ## Evidencias objetivas encontradas
 
@@ -137,8 +153,10 @@ As maiores lacunas encontradas sao estas:
 - O backend agora expoe `POST /corridas/{id}/comprovante/upload-url` e `POST /corridas/{id}/finalizar` aceita `upload_id`.
 - O backend agora expoe `POST /corridas/{id}/eventos` com contrato canonico e `meta.operational_event`.
 - O backend agora expoe `POST /entregador/contrato/assinatura/upload-url` para onboarding self-service.
+- O backend agora expoe `GET /entregador/contrato/download-url` para resolver contrato privado com URL navegavel.
 - O backend agora expoe `POST /entregador/auditoria-veiculo/upload-url`.
 - O backend agora expoe `POST /entregador/foto/upload-url`.
+- O backend agora expoe `POST /corridas/rota-ativa/recalcular` para preview server-driven da ordem de paradas.
 - A chave `MAPS_API_KEY` esta em `gradle.properties` e entra no manifesto via `com.google.android.geo.API_KEY`.
 - `PylotoFirebaseMessagingService.onNewToken()` ainda esta com TODO para enviar o token ao backend.
 - `ChatScreen.kt` e `HistoricoScreen.kt` continuam placeholders.
@@ -166,7 +184,7 @@ As maiores lacunas encontradas sao estas:
 | `POST /entregador/localizacao/batch` | Sim | OK | Contrato implementado |
 | `GET /entregador/perfil` | Sim | OK | Contrato implementado |
 | `PUT /entregador/perfil` | Sim | OK com ressalvas leves | Agora ja pode ser combinado com `POST /entregador/foto/upload-url`; falta o app consumir o pipeline novo |
-| `GET /entregador/onboarding-status` | Sim | OK com ressalvas | Falta download seguro/proxy para referencias de contrato |
+| `GET /entregador/onboarding-status` | Sim | OK com ressalvas leves | Agora pode ser combinado com `GET /entregador/contrato/download-url`; falta o app consumir o fluxo |
 | `GET /entregador/capacidade` | Sim | OK | Bom snapshot agregado, mas sem lista navegavel de pedidos ativos |
 | `GET /entregador/agenda` | Sim | OK | Contrato implementado |
 | `POST /entregador/agenda` | Sim | OK | Contrato implementado |
@@ -184,9 +202,8 @@ As maiores lacunas encontradas sao estas:
 
 | Prioridade | Rota sugerida | Motivo |
 |---|---|---|
-| `P0` | `POST /corridas/roteirizacao` ou `POST /corridas/rota-ativa/recalcular` | Calcular sequencia otima de coleta/entrega para multiplos pedidos, com ETA, distancia total, ordem das paradas e proxima acao |
 | `P0` | `POST /maps/routes` ou rota de dominio equivalente | Consumir Google Routes API pelo backend para rota, ETA, legs e polyline sem jogar a logica de navegação no app |
-| `P1` | `GET /entregador/contrato/download-url` ou `GET /entregador/contrato/download` | Resolver `contrato_download_ref` quando a referencia nao for HTTP publica |
+| `P1` | `POST /corridas/roteirizacao` | Evoluir a preview heuristica da rota ativa para uma roteirizacao generica e reutilizavel, com suporte a cenarios fora da corrida ativa |
 | `P1` | `POST /chat/{corridaId}/read` | Marcar mensagens como lidas no servidor, nao apenas localmente |
 | `P1` | `GET /chat/{corridaId}/unread-count` | Badge e contagem de nao lidas server-driven |
 | `P1` | `GET /chat/{corridaId}/stream` ou alternativa de sync incremental | Atualizacao em tempo real ou quase real do chat |
@@ -203,7 +220,7 @@ As maiores lacunas encontradas sao estas:
 | `POST /corridas/{id}/eventos` | O contrato agora esta canonizado para os eventos operacionais do app, mas ainda pode ganhar novos eventos sem quebrar a trilha atual | Expandir o enum com cuidado e manter a documentacao da maquina operacional alinhada |
 | `POST /corridas/{id}/finalizar` | O backend ja aceita `upload_id`, mas o app ainda nao consome o fluxo novo | Ajustar o app para usar `comprovante/upload-url`, enviar o binario e finalizar com `upload_id` |
 | `PUT /entregador/perfil` | O backend agora ja tem `upload-url`, mas o app ainda nao encadeia o envio da imagem com a atualizacao do perfil | Ajustar o app para usar `POST /entregador/foto/upload-url` e persistir a referencia retornada |
-| `GET /entregador/onboarding-status` | Pode devolver `contrato_download_ref` nao navegavel pelo app, como `gs://...` | Devolver URL assinada, proxy HTTP ou acao explicita de download |
+| `GET /entregador/onboarding-status` | O backend ja cobre o download seguro do contrato, mas o app ainda nao encadeia esse portal no fluxo de onboarding | Ajustar o app para usar `GET /entregador/contrato/download-url` quando houver contrato privado |
 | `POST /auth/logout` | Nao ha revogacao real; backend so responde sucesso | Implementar invalidacao de access/refresh token com Redis ou registry equivalente |
 | `POST /notificacoes/token` | So recebe o token cru | Passar a receber `device_id`, `platform`, `app_version`, `push_enabled` e suportar multiplos dispositivos |
 | `GET /corridas/historico` | Contrato serve para pagina basica, mas nao para tela com filtros/periodos | Adicionar filtros por data, status, tipo e resumos agregados |
@@ -219,16 +236,19 @@ Estas nao entram como "falta no backend", mas ajudam a separar o que e backlog d
 - `POST /corridas/{id}/localizacao`: backend existe, mas o app atualmente concentra tracking em `/entregador/localizacao` com `pedido_id`.
 - `POST /corridas/{id}/comprovante/upload-url`: backend existe, mas o app ainda finaliza corrida sem usar pipeline oficial de upload.
 - `POST /entregador/contrato/assinatura/upload-url`: backend existe, mas o app ainda precisa enviar o binario e fechar o onboarding pelo fluxo novo.
+- `GET /entregador/contrato/download-url`: backend existe, mas o app ainda precisa parar de depender de `contrato_download_ref` cru.
 - `POST /entregador/auditoria-veiculo/upload-url`: backend existe, mas o app ainda precisa enviar a imagem e depois registrar a evidencia do incidente.
 - `POST /entregador/foto/upload-url`: backend existe, mas o app ainda precisa usar a referencia retornada na atualizacao de perfil.
+- `POST /corridas/rota-ativa/recalcular`: backend existe, mas o app ainda precisa decidir quando pedir recalc server-driven em vez de ordenar localmente no improviso.
 
 ## Tarefas priorizadas para o backend
 
 ### `P0` - obrigatorio para operacao real
 
-1. Implementar roteirizacao server-side.
-   - Criar rota de calculo de rota otima para multiplas corridas.
-   - Responder com sequencia de paradas, legs, ETA, distancia total, polyline e justificativa da ordem.
+1. Evoluir a roteirizacao server-side.
+   - A preview heuristica ja existe em `POST /corridas/rota-ativa/recalcular`.
+   - Falta criar a camada viaria real em `POST /maps/routes` e, se necessario, uma rota generica de roteirizacao para multiplos cenarios.
+   - O alvo agora e responder com sequencia de paradas, legs, ETA, distancia total, polyline e justificativa da ordem.
 
 2. Fechar o consumo do pipeline oficial de upload.
    - O backend ja esta pronto para:
@@ -264,8 +284,9 @@ Estas nao entram como "falta no backend", mas ajudam a separar o que e backlog d
    - Marcar individualmente.
    - Marcar todas.
 
-8. Resolver download de contrato no onboarding.
-   - Nao depender de `gs://...` ou referencia interna nao navegavel.
+8. Fechar o consumo do download seguro de contrato.
+   - O backend ja resolve `gs://...` com `GET /entregador/contrato/download-url`.
+   - Falta o app usar esse portal no onboarding e parar de depender de referencia crua.
 
 9. Enriquecer `POST /notificacoes/token`.
    - Receber contexto do dispositivo e tratar troca/rotacao de tokens.
@@ -331,6 +352,25 @@ O backend `pyloto_atende` fechou duas lacunas que ainda obrigavam o app parceiro
 - Ajuste estrutural que sustentou a rodada:
   - `src/pedidos/orquestracao/estado/controles_operacionais.py` virou a fonte canonica do estado operacional da corrida;
   - `src/corridas_ativas/controls.py` ficou so como adapter de compatibilidade.
+
+## Atualizacao complementar 19 - `2026-04-01`
+
+O backend `pyloto_atende` fechou mais duas lacunas que ainda deixavam o onboarding privado e a multi-entrega presos em remendo local.
+
+- `GET /entregador/contrato/download-url`
+  - agora resolve contrato base privado com URL assinada de download quando a referencia vier de `gs://...`;
+  - se a referencia ja for HTTP publica, preserva o link sem teatro desnecessario;
+  - devolve tambem `filename`, `contract_version`, `expires_at` e `source`.
+
+- `POST /corridas/rota-ativa/recalcular`
+  - agora gera preview heuristica server-driven da ordem das paradas da rota ativa;
+  - aceita `lat` e `lng` para o app informar a origem mais recente;
+  - devolve `origin`, `stops`, `pedido_ids`, `pedido_principal_id`, `total_distance_m`, `total_duration_min` e `recalculated_at`.
+
+- Ajuste estrutural que sustentou a rodada:
+  - `src/corridas_ativas/snapshot.py` passou a concentrar a montagem do snapshot persistido;
+  - `src/corridas_ativas/service.py` voltou a ser so fachada curta;
+  - `src/parceiros/onboarding/autosservico/downloads/` virou o corredor proprio de downloads privados.
 
 ## Atualizacao de execucao - `2026-03-31`
 
