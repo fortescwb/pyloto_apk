@@ -10,15 +10,27 @@ import com.google.android.gms.maps.model.LatLng
 import com.pyloto.entregador.R
 
 /**
- * Cria o [BitmapDescriptor] do ícone de moto usado para marcar
- * a posição do entregador no mapa.
+ * Renderiza o drawable de moto em um [Bitmap] cru.
+ *
+ * Essa etapa NÃO depende do Maps SDK estar inicializado, então pode
+ * rodar em qualquer ponto da composição (inclusive em `remember`).
  */
-fun createMotorcycleMarkerIcon(context: Context): BitmapDescriptor {
+fun createMotorcycleMarkerBitmap(context: Context): Bitmap {
     val drawable = checkNotNull(ContextCompat.getDrawable(context, R.drawable.ic_motorcycle_marker))
     val bitmap = Bitmap.createBitmap(MARKER_ICON_SIZE_PX, MARKER_ICON_SIZE_PX, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
     drawable.setBounds(0, 0, MARKER_ICON_SIZE_PX, MARKER_ICON_SIZE_PX)
     drawable.draw(canvas)
+    return bitmap
+}
+
+/**
+ * Converte um [Bitmap] em [BitmapDescriptor] para uso como ícone de marcador.
+ *
+ * DEVE ser chamado somente quando o Maps SDK já estiver inicializado
+ * (dentro do escopo de um `GoogleMap` composable ou após `MapsInitializer`).
+ */
+fun bitmapToBitmapDescriptor(bitmap: Bitmap): BitmapDescriptor {
     return BitmapDescriptorFactory.fromBitmap(bitmap)
 }
 

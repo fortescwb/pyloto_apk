@@ -32,7 +32,8 @@ import com.pyloto.entregador.presentation.corridas.components.mapa.RADIUS_METERS
 import com.pyloto.entregador.presentation.corridas.components.mapa.STROKE_COLOR_NORMAL
 import com.pyloto.entregador.presentation.corridas.components.mapa.STROKE_COLOR_PRIORITY
 import com.pyloto.entregador.presentation.corridas.components.mapa.STROKE_WIDTH
-import com.pyloto.entregador.presentation.corridas.components.mapa.createMotorcycleMarkerIcon
+import com.pyloto.entregador.presentation.corridas.components.mapa.bitmapToBitmapDescriptor
+import com.pyloto.entregador.presentation.corridas.components.mapa.createMotorcycleMarkerBitmap
 import com.pyloto.entregador.presentation.corridas.components.mapa.resolveEntregadorPosition
 import java.text.NumberFormat
 import java.util.Locale
@@ -63,8 +64,8 @@ fun CorridasMapView(
     val currencyFormatter = remember {
         NumberFormat.getCurrencyInstance(Locale("pt", "BR"))
     }
-    val motorcycleMarkerIcon = remember(context) {
-        createMotorcycleMarkerIcon(context)
+    val motorcycleMarkerBitmap = remember(context) {
+        createMotorcycleMarkerBitmap(context)
     }
 
     val entregadorPosition = remember(entregadorLat, entregadorLng) {
@@ -102,6 +103,10 @@ fun CorridasMapView(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState
             ) {
+                val motorcycleMarkerIcon = remember(motorcycleMarkerBitmap) {
+                    bitmapToBitmapDescriptor(motorcycleMarkerBitmap)
+                }
+
                 Marker(
                     state = MarkerState(position = entregadorPosition),
                     title = "Sua localização",
