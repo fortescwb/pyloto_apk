@@ -26,7 +26,6 @@ import kotlinx.coroutines.launch
 import kotlin.math.asin
 import kotlin.math.ceil
 import kotlin.math.cos
-import kotlin.math.radians
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -267,10 +266,10 @@ class CorridaAtivaViewModel @Inject constructor(
         destinationLat: Double,
         destinationLng: Double
     ): Double {
-        val deltaLat = radians(destinationLat - originLat)
-        val deltaLng = radians(destinationLng - originLng)
-        val startLat = radians(originLat)
-        val endLat = radians(destinationLat)
+        val deltaLat = Math.toRadians(destinationLat - originLat)
+        val deltaLng = Math.toRadians(destinationLng - originLng)
+        val startLat = Math.toRadians(originLat)
+        val endLat = Math.toRadians(destinationLat)
         val arc = sin(deltaLat / 2) * sin(deltaLat / 2) +
             cos(startLat) * cos(endLat) * sin(deltaLng / 2) * sin(deltaLng / 2)
         return 2 * EARTH_RADIUS_M * asin(sqrt(arc))

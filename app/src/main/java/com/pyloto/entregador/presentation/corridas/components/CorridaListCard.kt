@@ -92,10 +92,10 @@ fun CorridaListCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // ── Linha 1: Valor + distância total + métricas ──
+            // ── Linha 1: Valor + distância até coleta + métricas ──
             TopRow(
                 valor = corrida.valor.toDouble(),
-                distanciaTotal = corridaComDistancia.distanciaTotalFormatada,
+                distanciaAteColeta = corridaComDistancia.distanciaAteColetaFormatada,
                 tempoTotalMin = corridaComDistancia.tempoTotalMin,
                 ganhoPorKm = corridaComDistancia.ganhoPorKm,
                 isPrioridade = corrida.prioridade,
@@ -129,12 +129,12 @@ fun CorridaListCard(
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Linha superior: Valor + distância total à esquerda, tempo e ganho/km à direita.
+ * Linha superior: Valor + distância até coleta à esquerda, tempo e ganho/km à direita.
  */
 @Composable
 private fun TopRow(
     valor: Double,
-    distanciaTotal: String,
+     distanciaAteColeta: String,
     tempoTotalMin: Int,
     ganhoPorKm: Double,
     isPrioridade: Boolean,
@@ -145,7 +145,7 @@ private fun TopRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // ── Valor + distância total ──
+        // ── Valor + distância até coleta ──
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -169,7 +169,7 @@ private fun TopRow(
             }
 
             Text(
-                text = distanciaTotal,
+                text = distanciaAteColeta,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = PylotoColors.TextPrimary

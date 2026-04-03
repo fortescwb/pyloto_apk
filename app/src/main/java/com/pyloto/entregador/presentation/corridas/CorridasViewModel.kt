@@ -84,7 +84,7 @@ class CorridasViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val location = locationRepository.getLastKnownLocation()
+                val location = locationRepository.getCurrentOrLastKnownLocation()
                 val lat = location?.latitude ?: _uiState.value.entregadorLat
                 val lng = location?.longitude ?: _uiState.value.entregadorLng
                 val corridas = corridaRepository.getCorridasDisponiveis(lat, lng)

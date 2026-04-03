@@ -15,7 +15,7 @@ object LocationPermissionSupport {
     )
 
     fun hasForegroundPermission(context: Context): Boolean {
-        return foregroundPermissions.all { permission ->
+        return foregroundPermissions.any { permission ->
             ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
         }
     }

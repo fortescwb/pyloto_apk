@@ -9,4 +9,5 @@ interface LocationRepository {
     suspend fun syncPendingLocations()
     fun getLastLocation(): Flow<Location?>
     suspend fun getLastKnownLocation(): Location?
+    suspend fun getCurrentOrLastKnownLocation(): Location?
 }

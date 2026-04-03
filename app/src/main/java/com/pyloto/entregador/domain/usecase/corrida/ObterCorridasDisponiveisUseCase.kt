@@ -12,7 +12,7 @@ class ObterCorridasDisponiveisUseCase @Inject constructor(
     private val locationRepository: LocationRepository
 ) {
     operator fun invoke(raio: Int = 5000): Flow<List<Corrida>> = flow {
-        val location = locationRepository.getLastKnownLocation()
+        val location = locationRepository.getCurrentOrLastKnownLocation()
         val lat = location?.latitude ?: 0.0
         val lng = location?.longitude ?: 0.0
 
