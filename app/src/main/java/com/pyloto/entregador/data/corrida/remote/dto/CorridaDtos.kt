@@ -28,6 +28,11 @@ data class CorridaResponse(
     @SerializedName("sla_status") val slaStatus: String? = null,
     @SerializedName("sla_rule_summary") val slaResumo: String? = null,
     @SerializedName("sla_alerts") val slaAlerts: List<String>? = null,
+    @SerializedName("distancia_ate_coleta_m") val distanciaAteColetaM: Int? = null,
+    @SerializedName("eta_ate_coleta_min") val etaAteColetaMin: Int? = null,
+    @SerializedName("distancia_total_m") val distanciaTotalM: Int? = null,
+    @SerializedName("tempo_total_min") val tempoTotalMin: Int? = null,
+    @SerializedName("rank_dispatch") val rankDispatch: Int? = null,
     @SerializedName("dados") val dados: Map<String, Any?>? = null
 )
 
@@ -57,6 +62,11 @@ data class CorridaDetalhesResponse(
     @SerializedName("sla_status") val slaStatus: String? = null,
     @SerializedName("sla_rule_summary") val slaResumo: String? = null,
     @SerializedName("sla_alerts") val slaAlerts: List<String>? = null,
+    @SerializedName("distancia_ate_coleta_m") val distanciaAteColetaM: Int? = null,
+    @SerializedName("eta_ate_coleta_min") val etaAteColetaMin: Int? = null,
+    @SerializedName("distancia_total_m") val distanciaTotalM: Int? = null,
+    @SerializedName("tempo_total_min") val tempoTotalMin: Int? = null,
+    @SerializedName("rank_dispatch") val rankDispatch: Int? = null,
     @SerializedName("dados") val dados: Map<String, Any?>? = null
 )
 
@@ -65,14 +75,15 @@ data class EnderecoResponse(
     @SerializedName("numero") val numero: String? = null,
     @SerializedName("complemento") val complemento: String? = null,
     @SerializedName("bairro") val bairro: String? = null,
-    @SerializedName("cidade") val cidade: String? = null,
+    @SerializedName(value = "cidade", alternate = ["cidade_estado"]) val cidade: String? = null,
     @SerializedName("cep") val cep: String? = null,
     @SerializedName(value = "latitude", alternate = ["lat"]) val latitude: Double? = null,
     @SerializedName(value = "longitude", alternate = ["lng"]) val longitude: Double? = null
 )
 
 data class FinalizacaoRequest(
-    @SerializedName("foto_comprovante_url") val fotoComprovanteUrl: String?
+    @SerializedName("foto_comprovante_url") val fotoComprovanteUrl: String?,
+    @SerializedName("upload_id") val uploadId: String? = null
 )
 
 data class CancelamentoRequest(

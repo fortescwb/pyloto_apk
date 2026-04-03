@@ -44,6 +44,11 @@ class CorridaMapper @Inject constructor() {
             slaStatus = response.slaStatus,
             slaResumo = response.slaResumo,
             slaAlerts = response.slaAlerts,
+            distanciaAteColetaM = response.distanciaAteColetaM,
+            etaAteColetaMin = response.etaAteColetaMin,
+            distanciaTotalM = response.distanciaTotalM,
+            tempoTotalMin = response.tempoTotalMin,
+            rankDispatch = response.rankDispatch,
             dados = response.dados
         )
     }
@@ -75,6 +80,11 @@ class CorridaMapper @Inject constructor() {
             slaStatus = response.slaStatus,
             slaResumo = response.slaResumo,
             slaAlerts = response.slaAlerts,
+            distanciaAteColetaM = response.distanciaAteColetaM,
+            etaAteColetaMin = response.etaAteColetaMin,
+            distanciaTotalM = response.distanciaTotalM,
+            tempoTotalMin = response.tempoTotalMin,
+            rankDispatch = response.rankDispatch,
             dados = response.dados
         )
     }
@@ -120,7 +130,12 @@ class CorridaMapper @Inject constructor() {
             fotoComprovanteUrl = entity.fotoComprovanteUrl,
             motivoCancelamento = entity.motivoCancelamento,
             prioridade = false,
-            modalidade = "comum"
+            modalidade = "comum",
+            distanciaAteColetaM = null,
+            etaAteColetaMin = null,
+            distanciaTotalM = null,
+            tempoTotalMin = null,
+            rankDispatch = null
         )
     }
 
@@ -177,6 +192,11 @@ class CorridaMapper @Inject constructor() {
         slaStatus: String?,
         slaResumo: String?,
         slaAlerts: List<String>?,
+        distanciaAteColetaM: Int?,
+        etaAteColetaMin: Int?,
+        distanciaTotalM: Int?,
+        tempoTotalMin: Int?,
+        rankDispatch: Int?,
         dados: Map<String, Any?>?
     ): Corrida {
         val dadosOrigem = dados?.get("origem") as? Map<*, *>
@@ -197,6 +217,14 @@ class CorridaMapper @Inject constructor() {
         val origem = toEndereco(enderecoOrigem, dadosOrigem)
         val destino = toEndereco(enderecoDestino, dadosDestino)
 
+        val precificacao = dados?.get("precificacao") as? Map<*, *>
+        val resolvedDistanciaKm = distanciaKm
+            ?: precificacao?.get("distancia_km")?.toString()?.toDoubleOrNull()
+            ?: 0.0
+        val resolvedTempoEstimadoMin = tempoEstimadoMin
+            ?: precificacao?.get("duracao_estimada_min")?.toString()?.toDoubleOrNull()?.toInt()
+            ?: 0
+
         return Corrida(
             id = id,
             cliente = Cliente(
@@ -207,8 +235,8 @@ class CorridaMapper @Inject constructor() {
             origem = origem,
             destino = destino,
             valor = BigDecimal.valueOf(valorEntrega ?: 0.0),
-            distanciaKm = distanciaKm ?: 0.0,
-            tempoEstimadoMin = tempoEstimadoMin ?: 0,
+            distanciaKm = resolvedDistanciaKm,
+            tempoEstimadoMin = resolvedTempoEstimadoMin,
             status = mapStatus(status),
             timestamps = CorridaTimestamps(
                 criadaEm = criadoEm?.let(::toEpochMillis) ?: System.currentTimeMillis(),
@@ -227,7 +255,12 @@ class CorridaMapper @Inject constructor() {
             entregaDeadlineEm = entregaDeadlineAt?.let(::toEpochMillis),
             slaStatus = slaStatus?.trim()?.lowercase().orEmpty().ifBlank { "ok" },
             slaResumo = slaResumo,
-            slaAlertas = slaAlerts.orEmpty().map(String::trim).filter(String::isNotEmpty)
+            slaAlertas = slaAlerts.orEmpty().map(String::trim).filter(String::isNotEmpty),
+            distanciaAteColetaM = distanciaAteColetaM,
+            etaAteColetaMin = etaAteColetaMin,
+            distanciaTotalM = distanciaTotalM,
+            tempoTotalMin = tempoTotalMin,
+            rankDispatch = rankDispatch
         )
     }
 
@@ -253,6 +286,7 @@ class CorridaMapper @Inject constructor() {
 
         val cidade = endereco?.cidade
             ?: fallback?.get("cidade")?.toString()
+            ?: fallback?.get("cidade_estado")?.toString()
             ?: ""
 
         val cep = endereco?.cep

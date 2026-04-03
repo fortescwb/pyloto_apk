@@ -17,12 +17,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material.icons.filled.Route
 import androidx.compose.material.icons.filled.Store
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -91,10 +93,12 @@ fun CorridaListCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // ── Linha 1: Distância até coleta + Valor + Badge ──
+            // ── Linha 1: Valor + métricas resumidas + Badge ──
             TopRow(
-                distanciaAteColeta = corridaComDistancia.distanciaAteColetaFormatada,
                 valor = corrida.valor.toDouble(),
+                distanciaAteColeta = corridaComDistancia.distanciaAteColetaFormatada,
+                tempoTotalMin = corridaComDistancia.tempoTotalMin,
+                ganhoPorKm = corridaComDistancia.ganhoPorKm,
                 isPrioridade = corrida.prioridade,
                 currencyFormatter = currencyFormatter
             )
@@ -104,17 +108,17 @@ fun CorridaListCard(
             // ── Linha 2: Rota visual (origem → destino) ─────────
             val aceita = EnderecoMasking.isCorridaAceita(corrida.status)
             RouteSection(
-                origemNome = corrida.cliente.nome,
+                origemNome = if (aceita) corrida.cliente.nome else "Coleta",
                 origemEndereco = EnderecoMasking.exibirEndereco(corrida.origem, aceita),
                 destinoEndereco = EnderecoMasking.exibirEndereco(corrida.destino, aceita)
             )
 
             HorizontalDivider(color = PylotoColors.OutlineVariant, thickness = 1.dp)
 
-            // ── Linha 3: Detalhes (distância, tempo, itens) ─────
+            // ── Linha 3: Detalhes do percurso (distância, tempo, itens) ─────
             DetailsRow(
-                distanciaTotal = corrida.distanciaKm,
-                tempoEstimado = corrida.tempoEstimadoMin,
+                distanciaPercurso = corridaComDistancia.distanciaPercursoKm,
+                tempoPercurso = corrida.tempoEstimadoMin,
                 itens = corrida.itens
             )
         }
@@ -126,12 +130,14 @@ fun CorridaListCard(
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Linha superior: Distância até coleta + Valor + Badge prioridade.
+ * Linha superior: Valor em destaque + métricas resumidas + Badge prioridade.
  */
 @Composable
 private fun TopRow(
-    distanciaAteColeta: String,
     valor: Double,
+    distanciaAteColeta: String,
+    tempoTotalMin: Int,
+    ganhoPorKm: Double,
     isPrioridade: Boolean,
     currencyFormatter: NumberFormat
 ) {
@@ -140,46 +146,29 @@ private fun TopRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // ── Distância até coleta ──
+        // ── Valor em destaque ──
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(32.dp)
                     .background(
-                        color = PylotoColors.TechBlue.copy(alpha = 0.1f),
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(PylotoColors.Gold, PylotoColors.GoldDark)
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.NearMe,
-                    contentDescription = null,
-                    tint = PylotoColors.TechBlue,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-            Column {
                 Text(
-                    text = distanciaAteColeta,
+                    text = currencyFormatter.format(valor),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = PylotoColors.TechBlue
-                )
-                Text(
-                    text = "até coleta",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = PylotoColors.TextSecondary
+                    color = Color.White
                 )
             }
-        }
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
             // ── Badge prioridade ──
             if (isPrioridade) {
                 Box(
@@ -209,23 +198,59 @@ private fun TopRow(
                     }
                 }
             }
+        }
 
-            // ── Valor ──
-            Box(
-                modifier = Modifier
-                    .background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(PylotoColors.Gold, PylotoColors.GoldDark)
-                        ),
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
+        // ── Métricas resumidas ──
+        Column(
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
             ) {
+                Icon(
+                    imageVector = Icons.Default.NearMe,
+                    contentDescription = null,
+                    tint = PylotoColors.TextSecondary,
+                    modifier = Modifier.size(12.dp)
+                )
                 Text(
-                    text = currencyFormatter.format(valor),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    text = "$distanciaAteColeta até coleta",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = PylotoColors.TextSecondary
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Timer,
+                    contentDescription = null,
+                    tint = PylotoColors.TextSecondary,
+                    modifier = Modifier.size(12.dp)
+                )
+                Text(
+                    text = "${tempoTotalMin}min total",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = PylotoColors.TextSecondary
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AttachMoney,
+                    contentDescription = null,
+                    tint = PylotoColors.TextSecondary,
+                    modifier = Modifier.size(12.dp)
+                )
+                Text(
+                    text = "R$ %.2f/km".format(ganhoPorKm),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = PylotoColors.TextSecondary
                 )
             }
         }
@@ -334,12 +359,12 @@ private fun RouteSection(
 }
 
 /**
- * Linha de detalhes: distância total, tempo estimado, itens.
+ * Linha de detalhes: distância do percurso, tempo do percurso, itens.
  */
 @Composable
 private fun DetailsRow(
-    distanciaTotal: Double,
-    tempoEstimado: Int,
+    distanciaPercurso: Double,
+    tempoPercurso: Int,
     itens: Int
 ) {
     Row(
@@ -348,12 +373,12 @@ private fun DetailsRow(
     ) {
         DetailChip(
             icon = Icons.Default.Route,
-            label = "%.1f km".format(distanciaTotal),
+            label = "%.1f km".format(distanciaPercurso),
             color = PylotoColors.MilitaryGreen
         )
         DetailChip(
             icon = Icons.Default.AccessTime,
-            label = "${tempoEstimado}min",
+            label = "${tempoPercurso}min",
             color = PylotoColors.TechBlue
         )
         DetailChip(

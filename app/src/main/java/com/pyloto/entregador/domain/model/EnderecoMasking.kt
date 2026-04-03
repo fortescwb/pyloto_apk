@@ -3,7 +3,22 @@ package com.pyloto.entregador.domain.model
 object EnderecoMasking {
 
     fun aproximado(endereco: Endereco): String {
-        return "${endereco.bairro}, ${endereco.cidade}"
+        val bairro = endereco.bairro.trim()
+        if (bairro.isNotEmpty()) {
+            return bairro
+        }
+
+        val streetName = endereco.logradouro.trim()
+        if (streetName.isNotEmpty()) {
+            return streetName
+        }
+
+        val cidade = endereco.cidade.trim()
+        if (cidade.isNotEmpty()) {
+            return cidade
+        }
+
+        return "Endereco indisponivel"
     }
 
     fun exibirEndereco(endereco: Endereco, corridaAceita: Boolean): String {
