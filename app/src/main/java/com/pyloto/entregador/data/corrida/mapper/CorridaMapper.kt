@@ -226,12 +226,18 @@ class CorridaMapper @Inject constructor() {
         val destino = toEndereco(enderecoDestino, dadosDestino)
 
         val precificacao = dados?.get("precificacao") as? Map<*, *>
+        val resolvedValorEntrega = valorEntrega
+            ?: precificacao.toOptionalDouble("valor_pedido")
+            ?: precificacao.toOptionalDouble("valor_pedido_com_taxa")
+            ?: 0.0
         val resolvedDistanciaKm = distanciaKm
             ?: precificacao?.get("distancia_km")?.toString()?.toDoubleOrNull()
             ?: 0.0
         val resolvedTempoEstimadoMin = tempoEstimadoMin
             ?: precificacao?.get("duracao_estimada_min")?.toString()?.toDoubleOrNull()?.toInt()
             ?: 0
+        val resolvedGanhoPorKm = ganhoPorKm
+            ?: if (resolvedDistanciaKm > 0) resolvedValorEntrega / resolvedDistanciaKm else null
 
         return Corrida(
             id = id,
@@ -242,7 +248,7 @@ class CorridaMapper @Inject constructor() {
             ),
             origem = origem,
             destino = destino,
-            valor = BigDecimal.valueOf(valorEntrega ?: 0.0),
+            valor = BigDecimal.valueOf(resolvedValorEntrega),
             distanciaKm = resolvedDistanciaKm,
             tempoEstimadoMin = resolvedTempoEstimadoMin,
             status = mapStatus(status),
@@ -268,10 +274,15 @@ class CorridaMapper @Inject constructor() {
             etaAteColetaMin = etaAteColetaMin,
             distanciaTotalM = distanciaTotalM,
             tempoTotalMin = tempoTotalMin,
-            ganhoPorKm = ganhoPorKm,
+            ganhoPorKm = resolvedGanhoPorKm,
             geoSource = geoSource,
             rankDispatch = rankDispatch
         )
+    }
+
+    private fun Map<*, *>?.toOptionalDouble(key: String): Double? {
+        val source = this ?: return null
+        return source[key]?.toString()?.toDoubleOrNull()
     }
 
     private fun toEndereco(
