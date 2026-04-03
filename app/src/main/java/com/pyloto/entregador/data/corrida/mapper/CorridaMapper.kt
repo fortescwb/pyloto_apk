@@ -226,9 +226,10 @@ class CorridaMapper @Inject constructor() {
         val destino = toEndereco(enderecoDestino, dadosDestino)
 
         val precificacao = dados?.get("precificacao") as? Map<*, *>
-        val resolvedValorEntrega = valorEntrega
-            ?: precificacao.toOptionalDouble("valor_pedido")
-            ?: precificacao.toOptionalDouble("valor_pedido_com_taxa")
+        val resolvedValorEntrega = valorEntrega?.takeIf { it > 0 }
+            ?: precificacao.toOptionalDouble("valor_pedido")?.takeIf { it > 0 }
+            ?: precificacao.toOptionalDouble("valor_pedido_com_taxa")?.takeIf { it > 0 }
+            ?: valorEntrega
             ?: 0.0
         val resolvedDistanciaKm = distanciaKm
             ?: precificacao?.get("distancia_km")?.toString()?.toDoubleOrNull()

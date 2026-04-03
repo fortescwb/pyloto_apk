@@ -294,11 +294,20 @@ private fun HomeContent(
                 key = { it.id }
             ) { corrida ->
                 val loc = uiState.localizacaoAtual
-                val distanciaAteColetaKm = if (loc != null) {
-                    haversineKm(loc.latitude, loc.longitude, corrida.origem.latitude, corrida.origem.longitude)
-                } else {
-                    corrida.distanciaAteColetaM?.let { it / 1000.0 } ?: 0.0
-                }
+                val distanciaAteColetaKm = corrida.distanciaAteColetaM
+                    ?.takeIf { it > 0 }
+                    ?.let { it / 1000.0 }
+                    ?: if (loc != null
+                        && corrida.origem.latitude != 0.0
+                        && corrida.origem.longitude != 0.0
+                    ) {
+                        haversineKm(
+                            loc.latitude, loc.longitude,
+                            corrida.origem.latitude, corrida.origem.longitude
+                        )
+                    } else {
+                        null
+                    }
                 EnrichedCorridaCard(
                     corridaComDistancia = CorridaComDistancia(corrida, distanciaAteColetaKm),
                     onAccept = onCorridaAccept,
