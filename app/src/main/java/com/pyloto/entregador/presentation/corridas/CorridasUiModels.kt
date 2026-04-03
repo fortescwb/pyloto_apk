@@ -15,9 +15,15 @@ data class CorridasUiState(
     val corridasOrdenadas: List<CorridaComDistancia>
         get() = corridas
             .map { corrida ->
-                val distanciaAteColetaKm = corrida.distanciaAteColetaM
-                    ?.takeIf { it >= 0 }
-                    ?.let { it / 1000.0 }
+                val origemLat = corrida.origem.latitude
+                val origemLng = corrida.origem.longitude
+                val distanciaAteColetaKm = if (origemLat != 0.0 && origemLng != 0.0) {
+                    haversineKm(entregadorLat, entregadorLng, origemLat, origemLng)
+                } else {
+                    corrida.distanciaAteColetaM
+                        ?.takeIf { it >= 0 }
+                        ?.let { it / 1000.0 }
+                }
                 CorridaComDistancia(corrida, distanciaAteColetaKm)
             }
             .sortedWith(

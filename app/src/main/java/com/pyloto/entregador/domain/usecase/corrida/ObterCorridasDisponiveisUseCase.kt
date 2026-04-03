@@ -13,8 +13,8 @@ class ObterCorridasDisponiveisUseCase @Inject constructor(
 ) {
     operator fun invoke(raio: Int = 5000): Flow<List<Corrida>> = flow {
         val location = locationRepository.getCurrentOrLastKnownLocation()
-        val lat = location?.latitude ?: 0.0
-        val lng = location?.longitude ?: 0.0
+        val lat = location?.latitude ?: DEFAULT_LAT
+        val lng = location?.longitude ?: DEFAULT_LNG
 
         val corridas = corridaRepository.getCorridasDisponiveis(
             lat = lat,
@@ -22,5 +22,10 @@ class ObterCorridasDisponiveisUseCase @Inject constructor(
             raio = raio
         )
         emit(corridas)
+    }
+
+    private companion object {
+        const val DEFAULT_LAT = -25.4284
+        const val DEFAULT_LNG = -49.2733
     }
 }
