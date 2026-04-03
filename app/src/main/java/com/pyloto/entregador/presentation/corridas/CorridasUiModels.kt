@@ -28,7 +28,7 @@ data class CorridasUiState(
             }
             .sortedWith(
                 compareBy<CorridaComDistancia>(
-                    { it.corrida.rankDispatch ?: Int.MAX_VALUE },
+                    { !it.corrida.prioridade },
                     { it.distanciaAteColetaKm ?: Double.MAX_VALUE }
                 )
             )
