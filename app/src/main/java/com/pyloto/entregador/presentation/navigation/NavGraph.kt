@@ -14,6 +14,7 @@ import com.pyloto.entregador.presentation.corrida.historico.HistoricoScreen
 import com.pyloto.entregador.presentation.corridas.CorridasScreen
 import com.pyloto.entregador.presentation.ganhos.GanhosScreen
 import com.pyloto.entregador.presentation.home.NewHomeScreen
+import com.pyloto.entregador.presentation.notificacoes.NotificacoesScreen
 import com.pyloto.entregador.presentation.onboarding.ContractSignatureScreen
 import com.pyloto.entregador.presentation.perfil.PerfilScreen
 
@@ -70,9 +71,16 @@ fun PylotoNavGraph(
                     navController.navigate(Routes.corridaAtiva(corridaId))
                 },
                 onPerfilClick = { navController.navigate(Routes.PERFIL) },
+                onNotificacoesClick = { navController.navigate(Routes.NOTIFICACOES) },
                 onHistoricoClick = { navController.navigate(Routes.HISTORICO) },
                 onCorridasClick = { navController.navigate(Routes.CORRIDAS) },
                 onGanhosClick = { navController.navigate(Routes.GANHOS) }
+            )
+        }
+
+        composable(Routes.NOTIFICACOES) {
+            NotificacoesScreen(
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
@@ -105,6 +113,11 @@ fun PylotoNavGraph(
             CorridaAtivaScreen(
                 corridaId = corridaId,
                 onCorridaFinalizada = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME) { inclusive = true }
+                    }
+                },
+                onReturnHome = {
                     navController.navigate(Routes.HOME) {
                         popUpTo(Routes.HOME) { inclusive = true }
                     }
@@ -166,8 +179,10 @@ fun PylotoNavGraph(
         composable(
             route = "${Routes.CHAT}/{corridaId}",
             arguments = listOf(navArgument("corridaId") { type = NavType.StringType })
-        ) {
+        ) { backStackEntry ->
+            val corridaId = backStackEntry.arguments?.getString("corridaId").orEmpty()
             ChatScreen(
+                corridaId = corridaId,
                 onNavigateBack = { navController.popBackStack() }
             )
         }

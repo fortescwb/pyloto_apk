@@ -17,8 +17,8 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material.icons.filled.Route
@@ -44,6 +44,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.pyloto.entregador.domain.model.Corrida
+import com.pyloto.entregador.domain.model.EnderecoMasking
+import com.pyloto.entregador.presentation.corridas.CorridaComDistancia
 import com.pyloto.entregador.presentation.theme.PylotoColors
 import com.pyloto.entregador.presentation.theme.PylotoTheme
 import java.text.NumberFormat
@@ -62,20 +64,22 @@ import java.util.Locale
  * Os callbacks onAccept e onViewDetails estão preparados para
  * integração com o ViewModel/CORE quando disponível.
  *
- * @param corrida modelo de domínio da corrida
+ * @param corridaComDistancia modelo enriquecido com distância até coleta
  * @param onAccept callback ao aceitar a corrida (recebe corridaId)
  * @param onViewDetails callback ao ver detalhes (recebe corridaId)
  */
 @Composable
 fun EnrichedCorridaCard(
-    corrida: Corrida,
+    corridaComDistancia: CorridaComDistancia,
     onAccept: (String) -> Unit,
     onViewDetails: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val corrida = corridaComDistancia.corrida
     val currencyFormatter = remember {
         NumberFormat.getCurrencyInstance(Locale("pt", "BR"))
     }
+    val corridaAceita = EnderecoMasking.isCorridaAceita(corrida.status)
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -94,11 +98,13 @@ fun EnrichedCorridaCard(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Linha 1: Valor + Info Básica (distância e tempo)
+                // Linha 1: Valor + distância total à esquerda, tempo + ganho/km à direita
                 ValueAndInfoRow(
                     value = corrida.valor.toDouble(),
-                    distance = corrida.distanciaKm,
-                    estimatedTime = corrida.tempoEstimadoMin,
+                    distanciaTotal = corridaComDistancia.distanciaTotalFormatada,
+                    tempoTotalMin = corridaComDistancia.tempoTotalMin,
+                    ganhoPorKm = corridaComDistancia.ganhoPorKm,
+                    isPrioridade = corrida.prioridade,
                     currencyFormatter = currencyFormatter
                 )
 
@@ -112,9 +118,9 @@ fun EnrichedCorridaCard(
                 LocationSection(
                     icon = Icons.Default.Store,
                     iconBackgroundColor = PylotoColors.MilitaryGreen,
-                    title = corrida.cliente.nome,
-                    address = corrida.origem.enderecoFormatado,
-                    additionalInfo = "${corrida.itens} ${if (corrida.itens == 1) "item" else "itens"}"
+                    title = if (corridaAceita) corrida.cliente.nome else "Coleta",
+                    address = EnderecoMasking.exibirEndereco(corrida.origem, corridaAceita),
+                    additionalInfo = null
                 )
 
                 // Divider
@@ -127,9 +133,16 @@ fun EnrichedCorridaCard(
                 LocationSection(
                     icon = Icons.Default.LocationOn,
                     iconBackgroundColor = PylotoColors.TechBlue,
-                    title = "Endereço de entrega",
-                    address = corrida.destino.enderecoFormatado,
+                    title = "Entrega",
+                    address = EnderecoMasking.exibirEndereco(corrida.destino, corridaAceita),
                     additionalInfo = null
+                )
+
+                // Linha 4: Detalhes do percurso
+                DetailsRow(
+                    distanciaPercurso = corridaComDistancia.distanciaPercursoKm,
+                    tempoPercurso = corrida.tempoEstimadoMin,
+                    itens = corrida.itens
                 )
 
                 // Botões de Ação
@@ -152,58 +165,57 @@ fun EnrichedCorridaCard(
 }
 
 /**
- * Linha com valor em destaque + distância + tempo estimado.
+ * Linha superior: Valor + distância total à esquerda, tempo e ganho/km à direita.
  */
 @Composable
 private fun ValueAndInfoRow(
     value: Double,
-    distance: Double,
-    estimatedTime: Int,
+    distanciaTotal: String,
+    tempoTotalMin: Int,
+    ganhoPorKm: Double,
+    isPrioridade: Boolean,
     currencyFormatter: NumberFormat
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Valor em destaque (fundo dourado)
-        Surface(
-            color = PylotoColors.Gold,
-            shape = RoundedCornerShape(12.dp),
-            shadowElevation = 2.dp
+        // ── Valor + distância total ──
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            Surface(
+                color = PylotoColors.Gold,
+                shape = RoundedCornerShape(12.dp),
+                shadowElevation = 2.dp
+            ) {
+                Text(
+                    text = currencyFormatter.format(value),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = PylotoColors.Black,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+
             Text(
-                text = currencyFormatter.format(value),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = PylotoColors.Black,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                text = distanciaTotal,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = PylotoColors.TextPrimary
             )
         }
 
-        // Info secundária (distância e tempo)
+        // ── Métricas resumidas: tempo total + ganho/km ──
         Column(
+            horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Route,
-                    contentDescription = null,
-                    tint = PylotoColors.TextSecondary,
-                    modifier = Modifier.size(14.dp)
-                )
-                Text(
-                    text = String.format(Locale("pt", "BR"), "%.1f km", distance),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = PylotoColors.TextSecondary
-                )
-            }
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.AccessTime,
@@ -212,12 +224,87 @@ private fun ValueAndInfoRow(
                     modifier = Modifier.size(14.dp)
                 )
                 Text(
-                    text = "$estimatedTime min",
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = "${tempoTotalMin}min total",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PylotoColors.TextSecondary
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Route,
+                    contentDescription = null,
+                    tint = PylotoColors.TextSecondary,
+                    modifier = Modifier.size(14.dp)
+                )
+                Text(
+                    text = "R$ %.2f/km".format(ganhoPorKm),
+                    style = MaterialTheme.typography.bodySmall,
                     color = PylotoColors.TextSecondary
                 )
             }
         }
+    }
+}
+
+/**
+ * Linha de detalhes: distância do percurso, tempo do percurso, itens.
+ */
+@Composable
+private fun DetailsRow(
+    distanciaPercurso: Double,
+    tempoPercurso: Int,
+    itens: Int
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        DetailChip(
+            icon = Icons.Default.Route,
+            label = "%.1f km".format(distanciaPercurso),
+            color = PylotoColors.MilitaryGreen
+        )
+        DetailChip(
+            icon = Icons.Default.AccessTime,
+            label = "${tempoPercurso}min",
+            color = PylotoColors.TechBlue
+        )
+        DetailChip(
+            icon = Icons.Default.Store,
+            label = "$itens ${if (itens == 1) "item" else "itens"}",
+            color = PylotoColors.Sepia
+        )
+    }
+}
+
+/**
+ * Chip compacto com ícone e label.
+ */
+@Composable
+private fun DetailChip(
+    icon: ImageVector,
+    label: String,
+    color: Color
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = color,
+            modifier = Modifier.size(16.dp)
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
+            color = color
+        )
     }
 }
 
@@ -311,7 +398,7 @@ private fun ActionButtonsRow(
             )
             Spacer(modifier = Modifier.width(4.dp))
             Icon(
-                imageVector = Icons.Default.ArrowForward,
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,
                 modifier = Modifier.size(18.dp)
             )
@@ -391,3 +478,4 @@ private fun EnrichedCorridaCardPreview() {
         }
     }
 }
+

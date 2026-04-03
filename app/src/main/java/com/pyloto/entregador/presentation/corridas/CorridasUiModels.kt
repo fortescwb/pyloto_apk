@@ -18,47 +18,60 @@ data class CorridasUiState(
                 val distanciaAteColetaKm = corrida.distanciaAteColetaM
                     ?.takeIf { it >= 0 }
                     ?.let { it / 1000.0 }
-                    ?: haversineKm(
-                        entregadorLat, entregadorLng,
-                        corrida.origem.latitude, corrida.origem.longitude
-                    )
                 CorridaComDistancia(corrida, distanciaAteColetaKm)
             }
             .sortedWith(
                 compareBy<CorridaComDistancia>(
                     { it.corrida.rankDispatch ?: Int.MAX_VALUE },
-                    { it.distanciaAteColetaKm }
+                    { it.distanciaAteColetaKm ?: Double.MAX_VALUE }
                 )
             )
 }
 
 data class CorridaComDistancia(
     val corrida: Corrida,
-    val distanciaAteColetaKm: Double
+    val distanciaAteColetaKm: Double?
 ) {
     val distanciaAteColetaFormatada: String
-        get() = if (distanciaAteColetaKm < 1.0) {
-            "${(distanciaAteColetaKm * 1000).toInt()}m"
-        } else {
-            "%.1fkm".format(distanciaAteColetaKm)
+        get() {
+            val distancia = distanciaAteColetaKm ?: return "--"
+            return if (distancia < 1.0) {
+                "${(distancia * 1000).toInt()}m"
+            } else {
+                "%.1fkm".format(distancia)
+            }
         }
 
     /** Distância do percurso (coleta→entrega) em km. */
     val distanciaPercursoKm: Double
-        get() = corrida.distanciaKm
+        get() = corrida.distanciaTotalM?.takeIf { it > 0 }?.div(1000.0) ?: corrida.distanciaKm
+
+    /** Distância total: parceiro→coleta + coleta→entrega. */
+    val distanciaTotalKm: Double
+        get() {
+            val distanciaAteColeta = distanciaAteColetaKm ?: 0.0
+            return distanciaAteColeta + distanciaPercursoKm
+        }
+
+    /** Distância total formatada para exibição. */
+    val distanciaTotalFormatada: String
+        get() = if (distanciaTotalKm < 1.0) {
+            "${(distanciaTotalKm * 1000).toInt()}m"
+        } else {
+            "%.1fkm".format(distanciaTotalKm)
+        }
 
     /** Tempo total estimado: tempo até coleta + tempo do percurso. */
     val tempoTotalMin: Int
         get() {
-            val etaColeta = corrida.etaAteColetaMin ?: 0
-            return etaColeta + corrida.tempoEstimadoMin
+            return corrida.tempoTotalMin ?: run {
+                val etaColeta = corrida.etaAteColetaMin ?: 0
+                etaColeta + corrida.tempoEstimadoMin
+            }
         }
 
     /** Ganho por km rodado: valor ÷ (distância até coleta + distância do percurso). */
     val ganhoPorKm: Double
-        get() {
-            val totalKm = distanciaAteColetaKm + distanciaPercursoKm
-            return if (totalKm > 0) corrida.valor.toDouble() / totalKm else 0.0
-        }
+        get() = corrida.ganhoPorKm ?: 0.0
 }
 

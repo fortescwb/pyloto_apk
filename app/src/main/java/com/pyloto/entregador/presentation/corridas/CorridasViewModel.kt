@@ -8,8 +8,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
 import javax.inject.Inject
 
@@ -25,7 +28,28 @@ class CorridasViewModel @Inject constructor(
 
     init {
         observeLocation()
-        loadCorridas()
+        waitForLocationThenLoad()
+    }
+
+    private fun waitForLocationThenLoad() {
+        viewModelScope.launch {
+            val location = withTimeoutOrNull(5_000) {
+                locationRepository.getLastLocation()
+                    .filterNotNull()
+                    .first()
+            }
+            if (location != null) {
+                _uiState.update {
+                    it.copy(
+                        entregadorLat = location.latitude,
+                        entregadorLng = location.longitude
+                    )
+                }
+            }
+            if (!hasLoadedFromLocation) {
+                loadCorridas()
+            }
+        }
     }
 
     private fun observeLocation() {
@@ -77,6 +101,7 @@ class CorridasViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        corridas = emptyList(),
                         erro = error.message ?: "Erro ao carregar corridas"
                     )
                 }
@@ -102,4 +127,3 @@ class CorridasViewModel @Inject constructor(
 }
 
 private const val LOCATION_EPSILON = 0.00001
-

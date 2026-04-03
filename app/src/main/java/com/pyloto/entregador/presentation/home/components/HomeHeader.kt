@@ -14,9 +14,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -48,8 +52,10 @@ import com.pyloto.entregador.presentation.theme.PylotoTheme
 @Composable
 fun HomeHeader(
     isOnline: Boolean,
+    notificationsUnreadCount: Int,
     cidade: String,
     regiao: String,
+    onNotificationsClick: () -> Unit,
     onToggleOnline: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -86,11 +92,36 @@ fun HomeHeader(
                     )
                 }
 
-                // Toggle Online/Offline
-                OnlineToggleButton(
-                    isOnline = isOnline,
-                    onClick = onToggleOnline
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onNotificationsClick) {
+                        BadgedBox(
+                            badge = {
+                                if (notificationsUnreadCount > 0) {
+                                    Badge {
+                                        Text(
+                                            text = notificationsUnreadCount.coerceAtMost(99).toString(),
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = "Notificacoes",
+                                tint = Color.White
+                            )
+                        }
+                    }
+
+                    OnlineToggleButton(
+                        isOnline = isOnline,
+                        onClick = onToggleOnline
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -197,8 +228,10 @@ private fun HomeHeaderPreview_Online() {
     PylotoTheme {
         HomeHeader(
             isOnline = true,
+            notificationsUnreadCount = 3,
             cidade = "Ponta Grossa, PR",
             regiao = "Centro",
+            onNotificationsClick = {},
             onToggleOnline = {}
         )
     }
@@ -210,8 +243,10 @@ private fun HomeHeaderPreview_Offline() {
     PylotoTheme {
         HomeHeader(
             isOnline = false,
+            notificationsUnreadCount = 0,
             cidade = "Ponta Grossa, PR",
             regiao = "Centro",
+            onNotificationsClick = {},
             onToggleOnline = {}
         )
     }

@@ -8,6 +8,7 @@ import com.pyloto.entregador.core.calendar.CalendarPermissionChecker
 import com.pyloto.entregador.core.calendar.CalendarSyncManager
 import com.pyloto.entregador.domain.model.AgendaTrabalho
 import com.pyloto.entregador.domain.repository.LocationRepository
+import com.pyloto.entregador.domain.repository.NotificacaoRepository
 import com.pyloto.entregador.domain.repository.PreferencesRepository
 import com.pyloto.entregador.domain.usecase.corrida.AceitarCorridaUseCase
 import com.pyloto.entregador.domain.usecase.corrida.ObterCorridasDisponiveisUseCase
@@ -16,9 +17,11 @@ import com.pyloto.entregador.domain.usecase.entregador.CancelarAgendamentoTrabal
 import com.pyloto.entregador.domain.usecase.entregador.ObterCapacidadeOperacionalUseCase
 import com.pyloto.entregador.domain.usecase.entregador.ObterAgendaTrabalhoUseCase
 import com.pyloto.entregador.domain.usecase.entregador.AtualizarStatusOnlineUseCase
+import com.pyloto.entregador.domain.usecase.entregador.ObterPerfilUseCase
 import com.pyloto.entregador.domain.usecase.home.ObterDailyStatsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -42,8 +45,10 @@ class HomeViewModel @Inject constructor(
     private val agendarDiaTrabalhoUseCase: AgendarDiaTrabalhoUseCase,
     private val cancelarAgendamentoTrabalhoUseCase: CancelarAgendamentoTrabalhoUseCase,
     private val atualizarStatusOnlineUseCase: AtualizarStatusOnlineUseCase,
+    private val obterPerfilUseCase: ObterPerfilUseCase,
     private val obterDailyStatsUseCase: ObterDailyStatsUseCase,
     private val locationRepository: LocationRepository,
+    private val notificacaoRepository: NotificacaoRepository,
     private val preferencesRepository: PreferencesRepository,
     private val calendarSyncManager: CalendarSyncManager,
     private val calendarPermissionChecker: CalendarPermissionChecker
@@ -57,26 +62,61 @@ class HomeViewModel @Inject constructor(
 
     private var loadCorridasJob: Job? = null
     private var hasLoadedFromFirstLocation = false
+    private var autoRefreshJob: Job? = null
 
     init {
         observeGoals()
         observeLocation()
+        observeNotificacoes()
         loadInitialData()
+        startAutoRefresh()
+    }
+
+    private fun observeNotificacoes() {
+        viewModelScope.launch {
+            notificacaoRepository.observarNaoLidas().collect { unreadCount ->
+                _uiState.update { state ->
+                    state.copy(notificationsUnreadCount = unreadCount)
+                }
+            }
+        }
     }
 
     private fun loadInitialData() {
         viewModelScope.launch {
+            val isOnline = refreshOnlineStatus()
             // Aguarda localização antes de buscar corridas (máx 5s)
             withTimeoutOrNull(5_000) {
                 locationRepository.getLastLocation()
                     .filterNotNull()
                     .first()
             }
-            loadCorridas()
+            if (isOnline) {
+                loadCorridas()
+            } else {
+                _uiState.update { state ->
+                    state.copy(
+                        isLoading = false,
+                        corridas = emptyList()
+                    )
+                }
+            }
         }
         loadDailyStats()
         loadOperationalCapacity()
         loadAgendaTrabalho()
+    }
+
+    private suspend fun refreshOnlineStatus(): Boolean {
+        return runCatching {
+            obterPerfilUseCase()
+        }.onSuccess { entregador ->
+            _uiState.update { state ->
+                state.copy(isOnline = entregador.statusOnline)
+            }
+        }.onFailure { error ->
+            Log.w(TAG, "Falha ao carregar status do parceiro: ${error.message}")
+        }.getOrNull()?.statusOnline ?: _uiState.value.isOnline
     }
 
     private fun observeGoals() {
@@ -94,7 +134,7 @@ class HomeViewModel @Inject constructor(
                     state.copy(localizacaoAtual = location?.toHomeLocation())
                 }
 
-                if (location != null && !hasLoadedFromFirstLocation) {
+                if (location != null && !hasLoadedFromFirstLocation && _uiState.value.isOnline) {
                     hasLoadedFromFirstLocation = true
                     loadCorridas()
                 }
@@ -111,6 +151,17 @@ class HomeViewModel @Inject constructor(
     fun loadCorridas() {
         loadCorridasJob?.cancel()
 
+        if (!_uiState.value.isOnline) {
+            _uiState.update { state ->
+                state.copy(
+                    isLoading = false,
+                    corridas = emptyList(),
+                    erro = null
+                )
+            }
+            return
+        }
+
         val raio = when (_uiState.value.modoVisualizacao) {
             HomeModoVisualizacao.PADRAO -> RAIO_PADRAO_METROS
             HomeModoVisualizacao.MAPA -> RAIO_MAPA_METROS
@@ -124,6 +175,7 @@ class HomeViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
+                            corridas = emptyList(),
                             erro = error.message ?: "Erro ao carregar corridas"
                         )
                     }
@@ -151,6 +203,14 @@ class HomeViewModel @Inject constructor(
             }.onFailure { error ->
                 Log.w(TAG, "Falha ao carregar capacidade: ${error.message}")
             }
+        }
+    }
+
+    fun refreshOperationalSnapshot() {
+        loadOperationalCapacity()
+        loadAgendaTrabalho()
+        if (_uiState.value.isOnline) {
+            loadCorridas()
         }
     }
 
@@ -236,7 +296,17 @@ class HomeViewModel @Inject constructor(
             runCatching {
                 atualizarStatusOnlineUseCase(newStatus)
             }.onSuccess {
-                _uiState.update { state -> state.copy(isOnline = newStatus, erro = null) }
+                _uiState.update { state ->
+                    state.copy(
+                        isOnline = newStatus,
+                        erro = null,
+                        corridas = if (newStatus) state.corridas else emptyList(),
+                        isLoading = if (newStatus) state.isLoading else false
+                    )
+                }
+                if (newStatus) {
+                    loadCorridas()
+                }
                 loadAgendaTrabalho()
             }.onFailure { error ->
                 _uiState.update {
@@ -279,6 +349,16 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private fun startAutoRefresh() {
+        autoRefreshJob?.cancel()
+        autoRefreshJob = viewModelScope.launch {
+            while (true) {
+                delay(AUTO_REFRESH_INTERVAL_MS)
+                refreshOperationalSnapshot()
+            }
+        }
+    }
+
     private fun Location.toHomeLocation(): HomeLocation {
         return HomeLocation(latitude = latitude, longitude = longitude)
     }
@@ -287,6 +367,6 @@ class HomeViewModel @Inject constructor(
         const val TAG = "HomeViewModel"
         const val RAIO_PADRAO_METROS = 5000
         const val RAIO_MAPA_METROS = 200
+        const val AUTO_REFRESH_INTERVAL_MS = 30_000L
     }
 }
-

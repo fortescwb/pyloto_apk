@@ -5,12 +5,14 @@ import com.pyloto.entregador.data.chat.repository.ChatRepositoryImpl
 import com.pyloto.entregador.data.corrida.repository.CorridaRepositoryImpl
 import com.pyloto.entregador.data.entregador.repository.EntregadorRepositoryImpl
 import com.pyloto.entregador.data.location.repository.LocationRepositoryImpl
+import com.pyloto.entregador.data.notificacao.repository.NotificacaoRepositoryImpl
 import com.pyloto.entregador.data.preferences.repository.PreferencesRepositoryImpl
 import com.pyloto.entregador.domain.repository.AuthRepository
 import com.pyloto.entregador.domain.repository.ChatRepository
 import com.pyloto.entregador.domain.repository.CorridaRepository
 import com.pyloto.entregador.domain.repository.EntregadorRepository
 import com.pyloto.entregador.domain.repository.LocationRepository
+import com.pyloto.entregador.domain.repository.NotificacaoRepository
 import com.pyloto.entregador.domain.repository.PreferencesRepository
 import dagger.Binds
 import dagger.Module
@@ -62,4 +64,10 @@ abstract class RepositoryModule {
     abstract fun bindPreferencesRepository(
         impl: PreferencesRepositoryImpl
     ): PreferencesRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindNotificacaoRepository(
+        impl: NotificacaoRepositoryImpl
+    ): NotificacaoRepository
 }

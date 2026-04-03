@@ -17,3 +17,15 @@ data class EnviarMensagemRequest(
     @SerializedName("conteudo") val conteudo: String,
     @SerializedName("tipo") val tipo: String = "texto"
 )
+
+data class ChatReadResponse(
+    @SerializedName("read_count") val readCount: Int = 0,
+    @SerializedName("unread_count") val unreadCount: Int = 0,
+    @SerializedName("has_unread") val hasUnread: Boolean = false
+)
+
+data class ChatUnreadCountResponse(
+    @SerializedName("corrida_id") val corridaId: String? = null,
+    @SerializedName("count") val count: Int = 0,
+    @SerializedName("has_unread") val hasUnread: Boolean = false
+)

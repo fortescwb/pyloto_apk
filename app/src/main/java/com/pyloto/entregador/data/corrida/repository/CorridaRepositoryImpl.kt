@@ -5,7 +5,6 @@ import com.pyloto.entregador.core.network.ApiService
 import com.pyloto.entregador.core.network.ConnectivityMonitor
 import com.pyloto.entregador.data.common.withCacheFallback
 import com.pyloto.entregador.data.common.withFallbackValue
-import com.pyloto.entregador.data.common.withNetworkGuard
 import com.pyloto.entregador.data.corrida.mapper.CorridaMapper
 import com.pyloto.entregador.data.corrida.remote.dto.CancelamentoRequest
 import com.pyloto.entregador.data.corrida.remote.dto.FinalizacaoRequest
@@ -35,19 +34,14 @@ class CorridaRepositoryImpl @Inject constructor(
 ) : CorridaRepository {
 
     override suspend fun getCorridasDisponiveis(lat: Double, lng: Double, raio: Int): List<Corrida> {
-        return withNetworkGuard(
-            operation = "corridas_disponiveis",
-            isConnected = connectivityMonitor.isCurrentlyConnected(),
-            remote = {
-                val response = apiService.getCorridasDisponiveis(lat, lng, raio)
-                val corridas = response.requireData().map { mapper.toDomain(it) }
-                corridaDao.insertAll(corridas.map { mapper.toEntity(it) })
-                corridas
-            },
-            local = {
-                corridaDao.getDisponiveis().map(mapper::toDomain)
-            }
-        )
+        if (!connectivityMonitor.isCurrentlyConnected()) {
+            throw IllegalStateException("Corridas disponiveis exigem conexao com o servidor.")
+        }
+
+        val response = apiService.getCorridasDisponiveis(lat, lng, raio)
+        val corridas = response.requireData().map { mapper.toDomain(it) }
+        corridaDao.insertAll(corridas.map { mapper.toEntity(it) })
+        return corridas
     }
 
     override suspend fun getCorridaDetalhes(corridaId: String): Corrida {
@@ -102,8 +96,14 @@ class CorridaRepositoryImpl @Inject constructor(
         corridaDao.insert(mapper.toEntity(corrida))
     }
 
-    override suspend fun finalizarCorrida(corridaId: String, fotoComprovante: String?) {
-        apiService.finalizarCorrida(corridaId, FinalizacaoRequest(fotoComprovanteUrl = fotoComprovante))
+    override suspend fun finalizarCorrida(corridaId: String, fotoComprovante: String?, uploadId: String?) {
+        apiService.finalizarCorrida(
+            corridaId,
+            FinalizacaoRequest(
+                fotoComprovanteUrl = fotoComprovante,
+                uploadId = uploadId
+            )
+        )
         val corrida = mapper.toDomain(apiService.getCorridaDetalhes(corridaId).requireData())
         corridaDao.insert(mapper.toEntity(corrida))
     }

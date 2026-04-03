@@ -32,6 +32,8 @@ data class CorridaResponse(
     @SerializedName("eta_ate_coleta_min") val etaAteColetaMin: Int? = null,
     @SerializedName("distancia_total_m") val distanciaTotalM: Int? = null,
     @SerializedName("tempo_total_min") val tempoTotalMin: Int? = null,
+    @SerializedName("ganho_por_km") val ganhoPorKm: Double? = null,
+    @SerializedName("geo_source") val geoSource: String? = null,
     @SerializedName("rank_dispatch") val rankDispatch: Int? = null,
     @SerializedName("dados") val dados: Map<String, Any?>? = null
 )
@@ -66,6 +68,8 @@ data class CorridaDetalhesResponse(
     @SerializedName("eta_ate_coleta_min") val etaAteColetaMin: Int? = null,
     @SerializedName("distancia_total_m") val distanciaTotalM: Int? = null,
     @SerializedName("tempo_total_min") val tempoTotalMin: Int? = null,
+    @SerializedName("ganho_por_km") val ganhoPorKm: Double? = null,
+    @SerializedName("geo_source") val geoSource: String? = null,
     @SerializedName("rank_dispatch") val rankDispatch: Int? = null,
     @SerializedName("dados") val dados: Map<String, Any?>? = null
 )

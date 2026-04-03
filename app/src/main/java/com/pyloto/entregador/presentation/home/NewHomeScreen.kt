@@ -34,9 +34,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,12 +50,15 @@ import androidx.compose.ui.unit.dp
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.hilt.navigation.compose.hiltViewModel
+import kotlinx.coroutines.flow.collectLatest
 import com.pyloto.entregador.core.calendar.CalendarPermissionChecker
 import com.pyloto.entregador.domain.model.DailyStats
 import com.pyloto.entregador.presentation.home.components.DailyGoalCard
 import com.pyloto.entregador.presentation.home.components.DailyStatsSection
 import com.pyloto.entregador.presentation.home.components.EnrichedCorridaCard
 import com.pyloto.entregador.presentation.home.components.HomeHeader
+import com.pyloto.entregador.presentation.corridas.CorridaComDistancia
+import com.pyloto.entregador.presentation.corridas.haversineKm
 import com.pyloto.entregador.presentation.location.LocationPermissionSupport
 import com.pyloto.entregador.presentation.theme.PylotoColors
 import com.pyloto.entregador.presentation.theme.PylotoTheme
@@ -81,6 +88,7 @@ fun NewHomeScreen(
     onCorridaClick: (String) -> Unit,
     onCorridaAccept: (String) -> Unit = {},
     onPerfilClick: () -> Unit,
+    onNotificacoesClick: () -> Unit,
     onHistoricoClick: () -> Unit,
     onCorridasClick: () -> Unit = onHistoricoClick,
     onGanhosClick: () -> Unit,
@@ -88,6 +96,7 @@ fun NewHomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     val backgroundLocationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -130,6 +139,14 @@ fun NewHomeScreen(
         }
     }
 
+    LaunchedEffect(viewModel) {
+        viewModel.events.collectLatest { event ->
+            when (event) {
+                is HomeEvent.CorridaAceita -> onCorridaAccept(event.corridaId)
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         if (!LocationPermissionSupport.hasForegroundPermission(context)) {
             locationPermissionLauncher.launch(LocationPermissionSupport.foregroundPermissions)
@@ -145,12 +162,26 @@ fun NewHomeScreen(
         }
     }
 
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshOperationalSnapshot()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     Scaffold(
         topBar = {
             HomeHeader(
                 isOnline = uiState.isOnline,
+                notificationsUnreadCount = uiState.notificationsUnreadCount,
                 cidade = uiState.cidadeAtual,
                 regiao = uiState.regiaoAtual,
+                onNotificationsClick = onNotificacoesClick,
                 onToggleOnline = viewModel::toggleOnlineStatus
             )
         },
@@ -172,10 +203,7 @@ fun NewHomeScreen(
             else -> {
                 HomeContent(
                     uiState = uiState,
-                    onCorridaAccept = { corridaId ->
-                        viewModel.aceitarCorrida(corridaId)
-                        onCorridaAccept(corridaId)
-                    },
+                    onCorridaAccept = viewModel::aceitarCorrida,
                     onAgendarDia = viewModel::agendarDia,
                     onCancelarAgendamento = viewModel::cancelarAgendamento,
                     onCorridaDetails = onCorridaClick,
@@ -265,8 +293,14 @@ private fun HomeContent(
                 items = uiState.corridas,
                 key = { it.id }
             ) { corrida ->
+                val loc = uiState.localizacaoAtual
+                val distanciaAteColetaKm = if (loc != null) {
+                    haversineKm(loc.latitude, loc.longitude, corrida.origem.latitude, corrida.origem.longitude)
+                } else {
+                    corrida.distanciaAteColetaM?.let { it / 1000.0 } ?: 0.0
+                }
                 EnrichedCorridaCard(
-                    corrida = corrida,
+                    corridaComDistancia = CorridaComDistancia(corrida, distanciaAteColetaKm),
                     onAccept = onCorridaAccept,
                     onViewDetails = onCorridaDetails
                 )
@@ -798,8 +832,10 @@ private fun NewHomeScreenPreview() {
             topBar = {
                 HomeHeader(
                     isOnline = mockUiState.isOnline,
+                    notificationsUnreadCount = 2,
                     cidade = mockUiState.cidadeAtual,
                     regiao = mockUiState.regiaoAtual,
+                    onNotificationsClick = {},
                     onToggleOnline = {}
                 )
             },

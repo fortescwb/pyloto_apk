@@ -148,6 +148,7 @@ private fun CorridaDetalhesContent(
     var showRecusalDialog by rememberSaveable { mutableStateOf(false) }
     var refusalCategory by rememberSaveable { mutableStateOf(REFUSAL_CATEGORY_OPTIONS.first().key) }
     var refusalReason by rememberSaveable { mutableStateOf("") }
+    val aceita = EnderecoMasking.isCorridaAceita(corrida.status)
 
     Column(
         modifier = modifier
@@ -206,20 +207,35 @@ private fun CorridaDetalhesContent(
         // ── Cliente ────────────────────────────────────────
         SlaInfoCard(corrida = corrida)
 
-        InfoCard(title = "Cliente") {
-            InfoRow(icon = Icons.Default.Person, text = corrida.cliente.nome)
-            if (corrida.cliente.telefone.isNotBlank()) {
-                InfoRow(icon = Icons.Default.Phone, text = corrida.cliente.telefone)
+        if (aceita) {
+            InfoCard(title = "Solicitante") {
+                InfoRow(icon = Icons.Default.Person, text = corrida.cliente.nome)
+                if (corrida.cliente.telefone.isNotBlank()) {
+                    InfoRow(icon = Icons.Default.Phone, text = corrida.cliente.telefone)
+                }
+                Text(
+                    text = "Contato do solicitante minimizado. Use apenas os canais oficiais da Pyloto.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PylotoColors.TextSecondary
+                )
             }
-            Text(
-                text = "Contato do solicitante minimizado. Use apenas os canais oficiais da Pyloto.",
-                style = MaterialTheme.typography.bodySmall,
-                color = PylotoColors.TextSecondary
-            )
+        } else {
+            InfoCard(title = "Privacidade antes do aceite") {
+                Text(
+                    text = "Nome e contato do solicitante sao liberados somente apos o aceite da corrida.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = PylotoColors.TextPrimary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Nesta etapa a tela mostra apenas dados minimos para tomada de decisao.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PylotoColors.TextSecondary
+                )
+            }
         }
 
         // ── Endereços ──────────────────────────────────────
-        val aceita = EnderecoMasking.isCorridaAceita(corrida.status)
         InfoCard(title = "Coleta") {
             EnderecoInfo(endereco = corrida.origem, aceita = aceita)
         }
@@ -475,7 +491,7 @@ private fun SlaInfoCard(corrida: Corrida) {
         )
         if (corrida.processamentoDiaSeguinte) {
             Text(
-                text = "Pedido comum remanejado para a janela do proximo dia por ter sido criado apos 18h.",
+                text = "Pedido comum criado apos 19h; processamento a partir das 7h do proximo dia.",
                 style = MaterialTheme.typography.bodySmall,
                 color = PylotoColors.TextSecondary,
                 modifier = Modifier.padding(top = 8.dp)

@@ -13,7 +13,7 @@ interface CorridaRepository {
     suspend fun recusarCorrida(corridaId: String, categoria: String, motivo: String)
     suspend fun iniciarCorrida(corridaId: String)
     suspend fun coletarCorrida(corridaId: String)
-    suspend fun finalizarCorrida(corridaId: String, fotoComprovante: String?)
+    suspend fun finalizarCorrida(corridaId: String, fotoComprovante: String?, uploadId: String? = null)
     suspend fun cancelarCorrida(corridaId: String, motivo: String)
     suspend fun registrarEventoOperacional(corridaId: String, event: CorridaOperationalEvent): Corrida
     fun observarCorridaAtiva(): Flow<Corrida?>

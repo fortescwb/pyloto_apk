@@ -31,7 +31,21 @@ data class Corrida(
     /** Resumo legível da regra vigente para a corrida */
     val slaResumo: String? = null,
     /** Alertas e avisos operacionais do SLA */
-    val slaAlertas: List<String> = emptyList()
+    val slaAlertas: List<String> = emptyList(),
+    /** Distancia do parceiro ate o ponto de coleta em metros (provider viario/backend) */
+    val distanciaAteColetaM: Int? = null,
+    /** ETA do parceiro ate a coleta em minutos (provider viario/backend) */
+    val etaAteColetaMin: Int? = null,
+    /** Distancia total estimada da corrida em metros */
+    val distanciaTotalM: Int? = null,
+    /** Tempo total estimado da corrida em minutos */
+    val tempoTotalMin: Int? = null,
+    /** Ganho por km oficial calculado no backend */
+    val ganhoPorKm: Double? = null,
+    /** Fonte da metrica geografica usada pelo backend */
+    val geoSource: String? = null,
+    /** Ranking de despacho retornado pelo backend para ordenar ofertas */
+    val rankDispatch: Int? = null
 )
 
 data class Cliente(

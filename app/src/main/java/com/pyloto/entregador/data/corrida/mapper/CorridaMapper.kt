@@ -48,6 +48,8 @@ class CorridaMapper @Inject constructor() {
             etaAteColetaMin = response.etaAteColetaMin,
             distanciaTotalM = response.distanciaTotalM,
             tempoTotalMin = response.tempoTotalMin,
+            ganhoPorKm = response.ganhoPorKm,
+            geoSource = response.geoSource,
             rankDispatch = response.rankDispatch,
             dados = response.dados
         )
@@ -84,6 +86,8 @@ class CorridaMapper @Inject constructor() {
             etaAteColetaMin = response.etaAteColetaMin,
             distanciaTotalM = response.distanciaTotalM,
             tempoTotalMin = response.tempoTotalMin,
+            ganhoPorKm = response.ganhoPorKm,
+            geoSource = response.geoSource,
             rankDispatch = response.rankDispatch,
             dados = response.dados
         )
@@ -135,6 +139,8 @@ class CorridaMapper @Inject constructor() {
             etaAteColetaMin = null,
             distanciaTotalM = null,
             tempoTotalMin = null,
+            ganhoPorKm = null,
+            geoSource = null,
             rankDispatch = null
         )
     }
@@ -196,6 +202,8 @@ class CorridaMapper @Inject constructor() {
         etaAteColetaMin: Int?,
         distanciaTotalM: Int?,
         tempoTotalMin: Int?,
+        ganhoPorKm: Double?,
+        geoSource: String?,
         rankDispatch: Int?,
         dados: Map<String, Any?>?
     ): Corrida {
@@ -260,6 +268,8 @@ class CorridaMapper @Inject constructor() {
             etaAteColetaMin = etaAteColetaMin,
             distanciaTotalM = distanciaTotalM,
             tempoTotalMin = tempoTotalMin,
+            ganhoPorKm = ganhoPorKm,
+            geoSource = geoSource,
             rankDispatch = rankDispatch
         )
     }

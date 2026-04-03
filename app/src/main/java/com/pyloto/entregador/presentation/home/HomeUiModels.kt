@@ -17,6 +17,7 @@ data class HomeUiState(
     val regiaoAtual: String = "Centro",
     val dailyStats: DailyStats = DailyStats(),
     val dailyGoal: Double = Constants.DEFAULT_DAILY_GOAL,
+    val notificationsUnreadCount: Int = 0,
     val operationalCapacity: OperationalCapacity? = null,
     val agendaTrabalho: AgendaTrabalho? = null,
     val isUpdatingAgenda: Boolean = false

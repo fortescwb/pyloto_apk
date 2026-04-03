@@ -20,7 +20,6 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material.icons.filled.Route
 import androidx.compose.material.icons.filled.Store
@@ -93,10 +92,10 @@ fun CorridaListCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // ── Linha 1: Valor + métricas resumidas + Badge ──
+            // ── Linha 1: Valor + distância total + métricas ──
             TopRow(
                 valor = corrida.valor.toDouble(),
-                distanciaAteColeta = corridaComDistancia.distanciaAteColetaFormatada,
+                distanciaTotal = corridaComDistancia.distanciaTotalFormatada,
                 tempoTotalMin = corridaComDistancia.tempoTotalMin,
                 ganhoPorKm = corridaComDistancia.ganhoPorKm,
                 isPrioridade = corrida.prioridade,
@@ -130,12 +129,12 @@ fun CorridaListCard(
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Linha superior: Valor em destaque + métricas resumidas + Badge prioridade.
+ * Linha superior: Valor + distância total à esquerda, tempo e ganho/km à direita.
  */
 @Composable
 private fun TopRow(
     valor: Double,
-    distanciaAteColeta: String,
+    distanciaTotal: String,
     tempoTotalMin: Int,
     ganhoPorKm: Double,
     isPrioridade: Boolean,
@@ -146,7 +145,7 @@ private fun TopRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // ── Valor em destaque ──
+        // ── Valor + distância total ──
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -168,6 +167,13 @@ private fun TopRow(
                     color = Color.White
                 )
             }
+
+            Text(
+                text = distanciaTotal,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = PylotoColors.TextPrimary
+            )
 
             // ── Badge prioridade ──
             if (isPrioridade) {
@@ -200,27 +206,11 @@ private fun TopRow(
             }
         }
 
-        // ── Métricas resumidas ──
+        // ── Métricas resumidas: tempo total + ganho/km ──
         Column(
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(3.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.NearMe,
-                    contentDescription = null,
-                    tint = PylotoColors.TextSecondary,
-                    modifier = Modifier.size(12.dp)
-                )
-                Text(
-                    text = "$distanciaAteColeta até coleta",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = PylotoColors.TextSecondary
-                )
-            }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(3.dp)

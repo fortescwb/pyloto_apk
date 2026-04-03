@@ -3,21 +3,54 @@ package com.pyloto.entregador.core.notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.provider.Settings
+import android.util.Log
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.pyloto.entregador.MainActivity
 import com.pyloto.entregador.R
+import com.pyloto.entregador.BuildConfig
+import com.pyloto.entregador.core.network.ApiService
 import com.pyloto.entregador.core.util.Constants
+import com.pyloto.entregador.data.notificacao.remote.dto.FCMTokenRequest
 import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class PylotoFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        // TODO: Enviar novo token ao backend via API
+        val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+            ?.takeIf { it.isNotBlank() }
+
+        val entryPoint = EntryPointAccessors.fromApplication(
+            applicationContext,
+            FirebaseServiceEntryPoint::class.java
+        )
+
+        CoroutineScope(Dispatchers.IO).launch {
+            runCatching {
+                entryPoint.apiService().registrarTokenFCM(
+                    FCMTokenRequest(
+                        token = token,
+                        deviceId = deviceId,
+                        appVersion = BuildConfig.VERSION_NAME,
+                        pushEnabled = true
+                    )
+                )
+            }.onFailure { error ->
+                Log.w(TAG, "Falha ao registrar token FCM no backend: ${error.message}")
+            }
+        }
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
@@ -92,5 +125,15 @@ class PylotoFirebaseMessagingService : FirebaseMessagingService() {
         val channel = NotificationChannel(channelId, name, importance)
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(channel)
+    }
+
+    @EntryPoint
+    @InstallIn(SingletonComponent::class)
+    interface FirebaseServiceEntryPoint {
+        fun apiService(): ApiService
+    }
+
+    private companion object {
+        const val TAG = "PylotoFcmService"
     }
 }

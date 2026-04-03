@@ -7,6 +7,7 @@ import com.pyloto.entregador.domain.model.Corrida
 import com.pyloto.entregador.domain.model.CorridaOperationalEvent
 import com.pyloto.entregador.domain.model.CorridaStatus
 import com.pyloto.entregador.domain.repository.CorridaRepository
+import com.pyloto.entregador.domain.repository.LocationRepository
 import com.pyloto.entregador.domain.repository.PreferencesRepository
 import com.pyloto.entregador.domain.usecase.corrida.ColetarCorridaUseCase
 import com.pyloto.entregador.domain.usecase.corrida.FinalizarCorridaUseCase
@@ -22,14 +23,25 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.math.asin
+import kotlin.math.ceil
+import kotlin.math.cos
+import kotlin.math.radians
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 data class CorridaAtivaUiState(
     val isLoading: Boolean = true,
     val isSubmitting: Boolean = false,
     val corrida: Corrida? = null,
+    val localizacaoLat: Double? = null,
+    val localizacaoLng: Double? = null,
+    val distanciaRestanteM: Int? = null,
+    val etaRestanteMin: Int? = null,
     val erro: String? = null,
     val currentStep: Int = 0,
-    val fotoComprovanteUrl: String = ""
+    val fotoComprovanteUrl: String = "",
+    val comprovanteUploadId: String = ""
 )
 
 sealed interface CorridaAtivaEffect {
@@ -41,6 +53,7 @@ sealed interface CorridaAtivaEffect {
 @HiltViewModel
 class CorridaAtivaViewModel @Inject constructor(
     private val corridaRepository: CorridaRepository,
+    private val locationRepository: LocationRepository,
     private val preferencesRepository: PreferencesRepository,
     private val iniciarCorridaUseCase: IniciarCorridaUseCase,
     private val coletarCorridaUseCase: ColetarCorridaUseCase,
@@ -54,6 +67,10 @@ class CorridaAtivaViewModel @Inject constructor(
     private val _effects = MutableSharedFlow<CorridaAtivaEffect>()
     val effects: SharedFlow<CorridaAtivaEffect> = _effects.asSharedFlow()
 
+    init {
+        observeLocationUpdates()
+    }
+
     fun loadCorrida(corridaId: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, erro = null) }
@@ -61,12 +78,13 @@ class CorridaAtivaViewModel @Inject constructor(
                 corridaRepository.getCorridaDetalhes(corridaId)
             }.onSuccess { corrida ->
                 _uiState.update { state ->
+                    val nextStep = inferStep(corrida, state.currentStep)
                     state.copy(
                         isLoading = false,
                         corrida = corrida,
                         erro = null,
-                        currentStep = inferStep(corrida, state.currentStep)
-                    )
+                        currentStep = nextStep
+                    ).refreshRealtimeMetrics()
                 }
             }.onFailure { error ->
                 _uiState.update {
@@ -83,6 +101,10 @@ class CorridaAtivaViewModel @Inject constructor(
         _uiState.update { it.copy(fotoComprovanteUrl = value) }
     }
 
+    fun updateComprovanteUploadId(value: String) {
+        _uiState.update { it.copy(comprovanteUploadId = value) }
+    }
+
     fun iniciarRotaColeta(corridaId: String) {
         runAction(corridaId, nextStep = 1) {
             iniciarCorridaUseCase(corridaId).getOrThrow()
@@ -97,7 +119,7 @@ class CorridaAtivaViewModel @Inject constructor(
                 corridaId,
                 CorridaOperationalEvent(
                     kind = "pickup_arrived",
-                    message = "Parceiro chegou ao ponto de coleta.",
+                    message = "Parceiro esta aguardando para coletar.",
                     source = "active_screen"
                 )
             ).getOrThrow()
@@ -125,7 +147,7 @@ class CorridaAtivaViewModel @Inject constructor(
                 corridaId,
                 CorridaOperationalEvent(
                     kind = "dropoff_arrived",
-                    message = "Parceiro chegou ao destino da entrega.",
+                    message = "Parceiro esta aguardando o destinatario.",
                     source = "active_screen"
                 )
             ).getOrThrow()
@@ -136,7 +158,8 @@ class CorridaAtivaViewModel @Inject constructor(
         runAction(corridaId, nextStep = 5) {
             finalizarCorridaUseCase(
                 corridaId,
-                _uiState.value.fotoComprovanteUrl.trim().ifEmpty { null }
+                _uiState.value.fotoComprovanteUrl.trim().ifEmpty { null },
+                _uiState.value.comprovanteUploadId.trim().ifEmpty { null }
             ).getOrThrow()
             preferencesRepository.clearActiveRouteContext()
             _effects.emit(CorridaAtivaEffect.StopTracking)
@@ -155,7 +178,7 @@ class CorridaAtivaViewModel @Inject constructor(
                 action()
             }.onSuccess {
                 _uiState.update { state ->
-                    state.copy(isSubmitting = false, currentStep = nextStep)
+                    state.copy(isSubmitting = false, currentStep = nextStep).refreshRealtimeMetrics()
                 }
                 loadCorrida(corridaId)
             }.onFailure { error ->
@@ -193,5 +216,68 @@ class CorridaAtivaViewModel @Inject constructor(
             CorridaStatus.CANCELADA -> 5
             else -> 0
         }
+    }
+
+    private fun observeLocationUpdates() {
+        viewModelScope.launch {
+            locationRepository.getLastLocation().collect { location ->
+                location ?: return@collect
+                _uiState.update { state ->
+                    state.copy(
+                        localizacaoLat = location.latitude,
+                        localizacaoLng = location.longitude
+                    ).refreshRealtimeMetrics()
+                }
+            }
+        }
+    }
+
+    private fun CorridaAtivaUiState.refreshRealtimeMetrics(): CorridaAtivaUiState {
+        val corridaAtual = corrida ?: return copy(distanciaRestanteM = null, etaRestanteMin = null)
+        val latAtual = localizacaoLat ?: return copy(distanciaRestanteM = null, etaRestanteMin = null)
+        val lngAtual = localizacaoLng ?: return copy(distanciaRestanteM = null, etaRestanteMin = null)
+
+        val targetLat: Double
+        val targetLng: Double
+        if (currentStep <= 2) {
+            targetLat = corridaAtual.origem.latitude
+            targetLng = corridaAtual.origem.longitude
+        } else {
+            targetLat = corridaAtual.destino.latitude
+            targetLng = corridaAtual.destino.longitude
+        }
+
+        val remainingMeters = haversineDistanceMeters(
+            originLat = latAtual,
+            originLng = lngAtual,
+            destinationLat = targetLat,
+            destinationLng = targetLng,
+        )
+        val etaMinutes = maxOf(1, ceil(remainingMeters / ETA_CITY_SPEED_M_PER_MIN).toInt())
+
+        return copy(
+            distanciaRestanteM = remainingMeters.toInt(),
+            etaRestanteMin = etaMinutes
+        )
+    }
+
+    private fun haversineDistanceMeters(
+        originLat: Double,
+        originLng: Double,
+        destinationLat: Double,
+        destinationLng: Double
+    ): Double {
+        val deltaLat = radians(destinationLat - originLat)
+        val deltaLng = radians(destinationLng - originLng)
+        val startLat = radians(originLat)
+        val endLat = radians(destinationLat)
+        val arc = sin(deltaLat / 2) * sin(deltaLat / 2) +
+            cos(startLat) * cos(endLat) * sin(deltaLng / 2) * sin(deltaLng / 2)
+        return 2 * EARTH_RADIUS_M * asin(sqrt(arc))
+    }
+
+    private companion object {
+        const val EARTH_RADIUS_M = 6_371_000.0
+        const val ETA_CITY_SPEED_M_PER_MIN = 450.0
     }
 }

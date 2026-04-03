@@ -6,9 +6,13 @@ import javax.inject.Inject
 class FinalizarCorridaUseCase @Inject constructor(
     private val repository: CorridaRepository
 ) {
-    suspend operator fun invoke(corridaId: String, fotoComprovante: String? = null): Result<Unit> {
+    suspend operator fun invoke(
+        corridaId: String,
+        fotoComprovante: String? = null,
+        uploadId: String? = null
+    ): Result<Unit> {
         return try {
-            repository.finalizarCorrida(corridaId, fotoComprovante)
+            repository.finalizarCorrida(corridaId, fotoComprovante, uploadId)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

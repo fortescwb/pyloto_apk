@@ -8,5 +8,6 @@ interface ChatRepository {
     suspend fun enviarMensagem(corridaId: String, conteudo: String, tipo: String = "TEXTO"): Mensagem
     suspend fun getMensagensPaginadas(corridaId: String, page: Int): List<Mensagem>
     suspend fun marcarComoLidas(corridaId: String)
+    suspend fun obterNaoLidasServidor(corridaId: String): Int
     fun contarNaoLidas(corridaId: String): Flow<Int>
 }

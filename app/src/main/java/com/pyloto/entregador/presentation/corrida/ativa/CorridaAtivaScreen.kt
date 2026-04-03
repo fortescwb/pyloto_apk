@@ -48,32 +48,32 @@ private data class RouteStep(
 
 private val steps = listOf(
     RouteStep(
-        title = "Iniciar rota",
+        title = "Iniciar rota de coleta",
         description = "Ativa a rota de coleta e inicia o rastreamento operacional.",
         actionLabel = "Iniciar rota de coleta"
     ),
     RouteStep(
-        title = "Chegada na coleta",
-        description = "Registra a chegada do parceiro no ponto de coleta.",
-        actionLabel = "Registrar chegada na coleta"
+        title = "Aguardando coleta",
+        description = "Informe que voce esta aguardando para coletar.",
+        actionLabel = "Estou aguardando para coletar"
     ),
     RouteStep(
-        title = "Confirmar coleta",
-        description = "Confirma que o item foi coletado e fica pronto para entrega.",
-        actionLabel = "Confirmar coleta"
+        title = "Pedido coletado",
+        description = "Marque que voce ja esta com o pedido.",
+        actionLabel = "Ja estou com o pedido"
     ),
     RouteStep(
-        title = "Rota de entrega",
+        title = "Iniciar rota de entrega",
         description = "Inicia o deslocamento ao destino mantendo o tracking ativo.",
         actionLabel = "Iniciar rota de entrega"
     ),
     RouteStep(
-        title = "Chegada no destino",
-        description = "Registra a chegada do parceiro no ponto de entrega.",
-        actionLabel = "Registrar chegada no destino"
+        title = "Aguardando destinatario",
+        description = "Informe que voce esta aguardando o destinatario.",
+        actionLabel = "Estou aguardando o destinatario"
     ),
     RouteStep(
-        title = "Finalizacao",
+        title = "Finalizada",
         description = "Envia a confirmacao final e encerra a rota ativa.",
         actionLabel = "Finalizar entrega"
     )
@@ -84,6 +84,7 @@ private val steps = listOf(
 fun CorridaAtivaScreen(
     corridaId: String,
     onCorridaFinalizada: () -> Unit,
+    onReturnHome: () -> Unit,
     onChatClick: (String) -> Unit,
     viewModel: CorridaAtivaViewModel = hiltViewModel()
 ) {
@@ -156,11 +157,16 @@ fun CorridaAtivaScreen(
                 CorridaAtivaContent(
                     corrida = corrida,
                     currentStep = uiState.currentStep,
+                    distanciaRestanteM = uiState.distanciaRestanteM,
+                    etaRestanteMin = uiState.etaRestanteMin,
                     isSubmitting = uiState.isSubmitting,
                     erro = uiState.erro,
                     fotoComprovanteUrl = uiState.fotoComprovanteUrl,
+                    comprovanteUploadId = uiState.comprovanteUploadId,
+                    onReturnHome = onReturnHome,
                     onChatClick = { onChatClick(corridaId) },
                     onFotoComprovanteChange = viewModel::updateFotoComprovanteUrl,
+                    onComprovanteUploadIdChange = viewModel::updateComprovanteUploadId,
                     onPrimaryAction = {
                         when (uiState.currentStep) {
                             0 -> viewModel.iniciarRotaColeta(corridaId)
@@ -182,11 +188,16 @@ fun CorridaAtivaScreen(
 private fun CorridaAtivaContent(
     corrida: Corrida,
     currentStep: Int,
+    distanciaRestanteM: Int?,
+    etaRestanteMin: Int?,
     isSubmitting: Boolean,
     erro: String?,
     fotoComprovanteUrl: String,
+    comprovanteUploadId: String,
+    onReturnHome: () -> Unit,
     onChatClick: () -> Unit,
     onFotoComprovanteChange: (String) -> Unit,
+    onComprovanteUploadIdChange: (String) -> Unit,
     onPrimaryAction: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -199,14 +210,23 @@ private fun CorridaAtivaContent(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        SummaryCard(corrida = corrida)
+        SummaryCard(
+            corrida = corrida,
+            currentStep = currentStep,
+            distanciaRestanteM = distanciaRestanteM,
+            etaRestanteMin = etaRestanteMin
+        )
         RouteChecklist(currentStep = currentStep)
         ActionCard(
             step = step,
+            canReturnHome = !corrida.prioridade,
             currentStep = currentStep,
             isSubmitting = isSubmitting,
             fotoComprovanteUrl = fotoComprovanteUrl,
+            comprovanteUploadId = comprovanteUploadId,
+            onReturnHome = onReturnHome,
             onFotoComprovanteChange = onFotoComprovanteChange,
+            onComprovanteUploadIdChange = onComprovanteUploadIdChange,
             onPrimaryAction = onPrimaryAction,
             onChatClick = onChatClick
         )
@@ -222,12 +242,18 @@ private fun CorridaAtivaContent(
 }
 
 @Composable
-private fun SummaryCard(corrida: Corrida) {
+private fun SummaryCard(
+    corrida: Corrida,
+    currentStep: Int,
+    distanciaRestanteM: Int?,
+    etaRestanteMin: Int?
+) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            val destinoOperacional = if (currentStep <= 2) "coleta" else "entrega"
             Text(corrida.cliente.nome, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text("Origem: ${corrida.origem.enderecoFormatado}")
             Text("Destino: ${corrida.destino.enderecoFormatado}")
@@ -235,7 +261,19 @@ private fun SummaryCard(corrida: Corrida) {
             Text("SLA: ${corrida.slaResumo ?: "Rastreamento operacional ativo"}")
             Text("Distancia estimada: ${corrida.distanciaKm} km")
             Text("Tempo estimado: ${corrida.tempoEstimadoMin} min")
+            if (distanciaRestanteM != null && etaRestanteMin != null) {
+                Text("Distancia restante ate $destinoOperacional: ${formatMeters(distanciaRestanteM)}")
+                Text("ETA restante ate $destinoOperacional: ${etaRestanteMin} min")
+            }
         }
+    }
+}
+
+private fun formatMeters(distanceMeters: Int): String {
+    return if (distanceMeters < 1000) {
+        "${distanceMeters}m"
+    } else {
+        "%.1fkm".format(distanceMeters / 1000.0)
     }
 }
 
@@ -262,10 +300,14 @@ private fun RouteChecklist(currentStep: Int) {
 @Composable
 private fun ActionCard(
     step: RouteStep,
+    canReturnHome: Boolean,
     currentStep: Int,
     isSubmitting: Boolean,
     fotoComprovanteUrl: String,
+    comprovanteUploadId: String,
+    onReturnHome: () -> Unit,
     onFotoComprovanteChange: (String) -> Unit,
+    onComprovanteUploadIdChange: (String) -> Unit,
     onPrimaryAction: () -> Unit,
     onChatClick: () -> Unit
 ) {
@@ -287,10 +329,18 @@ private fun ActionCard(
 
             if (currentStep >= steps.lastIndex) {
                 OutlinedTextField(
+                    value = comprovanteUploadId,
+                    onValueChange = onComprovanteUploadIdChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Upload ID do comprovante") },
+                    placeholder = { Text("Cole o upload_id retornado no upload-url") }
+                )
+
+                OutlinedTextField(
                     value = fotoComprovanteUrl,
                     onValueChange = onFotoComprovanteChange,
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("URL da foto de comprovante") },
+                    label = { Text("URL da foto de comprovante (fallback)") },
                     placeholder = { Text("https://...") }
                 )
             }
@@ -312,6 +362,15 @@ private fun ActionCard(
 
                 Button(onClick = onChatClick, enabled = !isSubmitting) {
                     Text("Abrir chat")
+                }
+            }
+
+            if (canReturnHome) {
+                Button(
+                    onClick = onReturnHome,
+                    enabled = !isSubmitting
+                ) {
+                    Text("Voltar para inicio")
                 }
             }
         }

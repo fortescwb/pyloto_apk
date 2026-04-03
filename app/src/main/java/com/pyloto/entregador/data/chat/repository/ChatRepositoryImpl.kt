@@ -64,7 +64,12 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     override suspend fun marcarComoLidas(corridaId: String) {
+        runCatching { apiService.marcarChatComoLido(corridaId).requireData() }
         mensagemDao.marcarTodasComoLidas(corridaId)
+    }
+
+    override suspend fun obterNaoLidasServidor(corridaId: String): Int {
+        return apiService.getChatUnreadCount(corridaId).requireData().count
     }
 
     override fun contarNaoLidas(corridaId: String): Flow<Int> {

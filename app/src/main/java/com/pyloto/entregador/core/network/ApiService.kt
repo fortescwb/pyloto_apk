@@ -6,6 +6,8 @@ import com.pyloto.entregador.data.auth.remote.dto.AuthToken
 import com.pyloto.entregador.data.auth.remote.dto.LoginRequest
 import com.pyloto.entregador.data.auth.remote.dto.RefreshTokenRequest
 import com.pyloto.entregador.data.chat.remote.dto.EnviarMensagemRequest
+import com.pyloto.entregador.data.chat.remote.dto.ChatReadResponse
+import com.pyloto.entregador.data.chat.remote.dto.ChatUnreadCountResponse
 import com.pyloto.entregador.data.chat.remote.dto.MensagemResponse
 import com.pyloto.entregador.data.corrida.remote.dto.CancelamentoRequest
 import com.pyloto.entregador.data.corrida.remote.dto.CorridaDetalhesResponse
@@ -28,7 +30,10 @@ import com.pyloto.entregador.data.entregador.remote.dto.StatusRequest
 import com.pyloto.entregador.data.ganhos.remote.dto.GanhosResponse
 import com.pyloto.entregador.data.location.remote.dto.LocationUpdate
 import com.pyloto.entregador.data.notificacao.remote.dto.FCMTokenRequest
+import com.pyloto.entregador.data.notificacao.remote.dto.NotificacaoReadAllResponse
+import com.pyloto.entregador.data.notificacao.remote.dto.NotificacaoReadResponse
 import com.pyloto.entregador.data.notificacao.remote.dto.NotificacaoResponse
+import com.pyloto.entregador.data.notificacao.remote.dto.NotificacaoUnreadCountResponse
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -170,6 +175,16 @@ interface ApiService {
         @Body mensagem: EnviarMensagemRequest
     ): ApiResponse<MensagemResponse>
 
+    @POST("chat/{corridaId}/read")
+    suspend fun marcarChatComoLido(
+        @Path("corridaId") corridaId: String
+    ): ApiResponse<ChatReadResponse>
+
+    @GET("chat/{corridaId}/unread-count")
+    suspend fun getChatUnreadCount(
+        @Path("corridaId") corridaId: String
+    ): ApiResponse<ChatUnreadCountResponse>
+
     @POST("notificacoes/token")
     suspend fun registrarTokenFCM(@Body token: FCMTokenRequest): ApiResponse<Unit>
 
@@ -178,4 +193,15 @@ interface ApiService {
         @Query("page") page: Int = 0,
         @Query("size") size: Int = 20
     ): ApiResponse<PaginatedResponse<NotificacaoResponse>>
+
+    @GET("notificacoes/unread-count")
+    suspend fun getNotificacoesUnreadCount(): ApiResponse<NotificacaoUnreadCountResponse>
+
+    @POST("notificacoes/{id}/read")
+    suspend fun marcarNotificacaoComoLida(
+        @Path("id") notificacaoId: String
+    ): ApiResponse<NotificacaoReadResponse>
+
+    @POST("notificacoes/read-all")
+    suspend fun marcarNotificacoesComoLidas(): ApiResponse<NotificacaoReadAllResponse>
 }
