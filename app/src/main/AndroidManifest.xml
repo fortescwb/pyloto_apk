@@ -16,8 +16,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Câmera (comprovante de entrega) -->
-    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- TODO: Restaurar CAMERA quando feature de comprovante de entrega for implementada -->
 
     <!-- Vibração (notificações) -->
     <uses-permission android:name="android.permission.VIBRATE" />
