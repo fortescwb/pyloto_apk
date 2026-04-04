@@ -2,10 +2,10 @@
 # Pyloto Parceiro — ProGuard / R8 rules
 # ──────────────────────────────────────────────
 
-# Manter DTOs que transitam por Gson (serialização/deserialização)
--keepclassmembers class com.pyloto.entregador.data.**.dto.** { *; }
--keepclassmembers class com.pyloto.entregador.domain.model.** { *; }
--keepclassmembers class com.pyloto.entregador.core.network.model.** { *; }
+# Manter DTOs que transitam por Gson (classe + membros preservados para reflexão)
+-keep class com.pyloto.entregador.data.**.dto.** { *; }
+-keep class com.pyloto.entregador.domain.model.** { *; }
+-keep class com.pyloto.entregador.core.network.model.** { *; }
 
 # Gson: manter anotações @SerializedName
 -keepattributes Signature
