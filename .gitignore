@@ -36,9 +36,6 @@ Thumbs.db
 *.jks
 *.keystore
 
-# Proguard
-/app/proguard-rules.pro
-
 # Test results
 /app/build/reports
 /app/build/test-results

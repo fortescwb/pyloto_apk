@@ -10,6 +10,13 @@ plugins {
 
 import java.util.Properties
 
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use(::load)
+    }
+}
+
 android {
     namespace = "com.pyloto.entregador"
     compileSdk = 35
@@ -18,8 +25,8 @@ android {
         applicationId = "com.pyloto.entregador"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -32,12 +39,6 @@ android {
         }
 
         // Maps API key: prioriza gradle/local.properties, depois env var.
-        val localProperties = Properties().apply {
-            val file = rootProject.file("local.properties")
-            if (file.exists()) {
-                file.inputStream().use(::load)
-            }
-        }
         val mapsApiKey = (
             project.findProperty("MAPS_API_KEY") as String?
                 ?: localProperties.getProperty("MAPS_API_KEY")
@@ -47,6 +48,17 @@ android {
             ?.takeIf { it.isNotEmpty() }
             ?: "placeholder-replace-with-real-key"
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = file("upload-keystore.jks")
+            storePassword = localProperties.getProperty("UPLOAD_STORE_PASSWORD")
+                ?: System.getenv("UPLOAD_STORE_PASSWORD") ?: ""
+            keyAlias = "upload"
+            keyPassword = localProperties.getProperty("UPLOAD_KEY_PASSWORD")
+                ?: System.getenv("UPLOAD_KEY_PASSWORD") ?: ""
+        }
     }
 
     buildTypes {
@@ -59,6 +71,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
